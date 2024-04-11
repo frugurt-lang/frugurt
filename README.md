@@ -36,9 +36,8 @@ Also, there are 3 flavors of types:
 - class - mutable, passed by reference
 - data - immutable, passed by reference
 
-There is also builtin data validation, using "watches"
+There is also builtin data validation, using "watches", see [docs](https://leokostarev.github.io/frugurt-lang/03-object-oriented-programming/06-watches.html).
 
-Example <!-- TODO add link to docs -->
 
 ```
 struct Vector {
@@ -93,8 +92,7 @@ print(v3); // Vector{x=4, y=6}
 
 ```
 
-> `-----some_name-----` are keywords, you can find more about them in
+> `-----some_name-----` are keywords, you can find more about them in docs.
 
-<!-- TODO: add link -->
 
 [See docs for more details](https://leokostarev.github.io/frugurt-lang/)
