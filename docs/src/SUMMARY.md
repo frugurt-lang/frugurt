@@ -1,6 +1,6 @@
 # Summary
 
-[Introduction](../../README.md)
+[Introduction](./README.md)
 
 - [Getting started](./01-getting-started/01-index.md)
   - [Installation and Running](./01-getting-started/02-installation.md)
