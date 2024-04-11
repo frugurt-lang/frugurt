@@ -54,4 +54,4 @@ let f = fn(x, y) {
 print(f(1, 2)); // 3
 ```
 
-We will learn more about functions in the [corresponding section](https://leokostarev.github.io/frugurt-lang/02-common-concepts/05-functions.html).
+We will learn more about functions in the [corresponding chapter](https://leokostarev.github.io/frugurt-lang/02-common-concepts/05-functions.html).

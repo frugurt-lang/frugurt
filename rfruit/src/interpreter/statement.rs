@@ -2,6 +2,7 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::interpreter::{
     control::Control,
+    easter_eggs,
     error::FruError,
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
@@ -230,6 +231,10 @@ impl FruStatement {
                 methods,
                 static_methods,
             } => {
+                if *ident == Identifier::new("NahIdWin") {
+                    easter_eggs::launch_satoru();
+                }
+
                 let methods = methods
                     .iter()
                     .map(|(ident, args, body)| {

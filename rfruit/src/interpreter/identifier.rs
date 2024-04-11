@@ -1,8 +1,8 @@
-use once_cell::sync::Lazy;
-
 use std::{
     collections::HashMap, fmt::Debug, fmt::Display, hash::DefaultHasher, hash::Hash, hash::Hasher,
 };
+
+use once_cell::sync::Lazy;
 
 // this map is used for Identifier visualization
 static mut BACKWARDS_MAP: Lazy<HashMap<u64, String>> = Lazy::new(HashMap::new);
@@ -45,15 +45,15 @@ impl OperatorIdentifier {
 
 impl Debug for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", unsafe {
-            BACKWARDS_MAP.get(&self.hashed_ident).unwrap()
-        })
+        write!(f, "{}", self)
     }
 }
 
 impl Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{}", unsafe {
+            BACKWARDS_MAP.get(&self.hashed_ident).unwrap()
+        })
     }
 }
 
