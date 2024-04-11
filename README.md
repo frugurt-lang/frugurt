@@ -8,7 +8,7 @@ Example
 
 ```
 let square = fn(x) {
-    // if thr last expression has no semicolon then it is returned
+    // if the last expression has no semicolon then it is returned
     x * x
 };
 
