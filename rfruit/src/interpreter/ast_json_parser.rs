@@ -104,7 +104,7 @@ fn convert_to_expr(ast: &Value) -> FruExpression {
 
             let all_precedences: BTreeSet<_> = rest.iter().map(|x| x.0 .0).collect();
 
-            rest.push_front(((100, Identifier::for_none()), Box::new(first)));
+            rest.push_front(((100, Identifier::for_nah()), Box::new(first)));
 
             for precedence in all_precedences {
                 let mut cursor = rest.cursor_front_mut();

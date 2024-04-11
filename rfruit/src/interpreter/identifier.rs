@@ -65,8 +65,8 @@ impl Debug for OperatorIdentifier {
 
 impl Identifier {
     // builtin types
-    pub fn for_none() -> Self {
-        Self::new("None")
+    pub fn for_nah() -> Self {
+        Self::new("Nah")
     }
 
     pub fn for_number() -> Self {

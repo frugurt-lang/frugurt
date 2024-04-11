@@ -5,6 +5,7 @@
 The main purpose of Frugurt is to present entirely different approach to OOP, than in other languages like Python or JavaScript.
 
 Example
+
 ```
 let square = fn(x) {
     // if thr last expression has no semicolon then it is returned
@@ -22,14 +23,15 @@ print(square(7)); // 49
 
 ```
 
-
 My main goal is to make objects strictly typed (not variables!).
 
 All types have fixed schema, that means:
+
 - All fields must be declared at once
 - Any other fields can never be declared
 
 Also, there are 3 flavors of types:
+
 - struct - mutable, passed by value
 - class - mutable, passed by reference
 - data - immutable, passed by reference
@@ -37,6 +39,7 @@ Also, there are 3 flavors of types:
 There is also builtin data validation, using "watches"
 
 Example <!-- TODO add link to docs -->
+
 ```
 struct Vector {
     x;
@@ -78,7 +81,7 @@ struct Vector {
 }
 
 // you can define operator with any name you want!
-operator <+> (v1 : Vector, v2 : Vector) { 
+operator <+> (v1 : Vector, v2 : Vector) {
     v1.add(v2) // no semicolon = return
 }
 
@@ -89,8 +92,9 @@ let v3 = v1 <+> v2;
 print(v3); // Vector{x=4, y=6}
 
 ```
-> `-----some_name-----` are keywords, you can find more about them in 
+
+> `-----some_name-----` are keywords, you can find more about them in
+
 <!-- TODO: add link -->
 
-See docs for more details
-<!-- TODO: add link -->
+[See docs for more details](https://leokostarev.github.io/frugurt-lang/)

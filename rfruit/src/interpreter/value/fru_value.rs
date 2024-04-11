@@ -32,7 +32,7 @@ pub enum FruValue {
 impl FruValue {
     pub fn get_type_identifier(&self) -> Identifier {
         match self {
-            FruValue::Nah => Identifier::for_none(),
+            FruValue::Nah => Identifier::for_nah(),
             FruValue::Number(_) => Identifier::for_number(),
             FruValue::Bool(_) => Identifier::for_bool(),
             FruValue::String(_) => Identifier::for_string(),
@@ -158,7 +158,7 @@ impl PartialEq for FruValue {
 impl Debug for FruValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FruValue::Nah => write!(f, "None"),
+            FruValue::Nah => write!(f, "nah"),
             FruValue::Number(v) => write!(f, "{}", v),
             FruValue::Bool(v) => write!(f, "{}", v),
             FruValue::String(v) => write!(f, "{}", v),

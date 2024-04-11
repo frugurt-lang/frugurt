@@ -1,14 +1,21 @@
-use serde_json::Value;
+use std::{env::current_dir, path::Path, process::Command, rc::Rc};
 
-use std::{path::Path, process::Command, rc::Rc};
+use serde_json::Value;
 
 use crate::interpreter::{ast_json_parser, control::Control, error::FruError, scope::Scope};
 
 pub fn execute_file(path: &Path, converter_path: Option<&Path>) -> Result<Rc<Scope>, FruError> {
-    let converter_result = Command::new(converter_path.unwrap_or(Path::new("converter")))
-        .arg(path)
-        .output()
-        .expect("converter should be located in the same directory");
+    let converter_result = Command::new(
+        converter_path.unwrap_or(
+            current_dir()
+                .unwrap()
+                .join(Path::new("converter"))
+                .as_path(),
+        ),
+    )
+    .arg(path)
+    .output()
+    .expect("converter should be located in the same directory");
 
     let text = std::str::from_utf8(&converter_result.stdout);
 
