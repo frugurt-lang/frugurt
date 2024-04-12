@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - preprocessor-setup
   pull_request:
   workflow_dispatch:
 
@@ -23,16 +24,27 @@ jobs:
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: "latest"
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
 
-      - run: mdbook build docs
+      - name: Build Preprocessor
+        run: cd fru-highlight && cargo install --path .
+      
+      - name: Build Book
+        run: mdbook build docs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
           path: "docs/book"
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
