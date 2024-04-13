@@ -16,7 +16,7 @@ jobs:
       id-token: write
       pages: write
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }} 
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -27,12 +27,14 @@ jobs:
           mdbook-version: "latest"
 
       - name: Install Rust
+        if: ${{ vars.PREPROCESS }}
         uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
           override: true
 
       - name: Build Preprocessor
+        if: ${{ vars.PREPROCESS }}
         run: cd fru-highlight && cargo install --path .
 
       - name: Build Book

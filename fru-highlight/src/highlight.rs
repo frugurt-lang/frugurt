@@ -81,7 +81,7 @@ fn highlight_code_block(mut code: String) -> String {
         code = code.replace(kw, format!("<span class=\"keyword\">{}</span>", kw).as_str());
     }
 
-    code
+    code.replace('\n', "<br>")
 }
 
 #[cfg(test)]
