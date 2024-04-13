@@ -18,13 +18,14 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Setup mdBook
         uses: peaceiris/actions-mdbook@v1
         with:
           mdbook-version: "latest"
-      
+
       - name: Install Rust
         uses: actions-rs/toolchain@v1
         with:
@@ -33,7 +34,7 @@ jobs:
 
       - name: Build Preprocessor
         run: cd fru-highlight && cargo install --path .
-      
+
       - name: Build Book
         run: mdbook build docs
 

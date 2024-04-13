@@ -1,23 +1,19 @@
-use std::{
-    fs::OpenOptions,
-    io::{self, Write},
-    process::exit,
-};
+#![feature(iter_advance_by)]
+
+use std::{io, process::exit};
 
 use clap::{Arg, ArgMatches, Command};
 use mdbook::{
-    book::Book,
-    BookItem,
-    preprocess::{
-        CmdPreprocessor,
-        Preprocessor,
-        PreprocessorContext,
-    },
     errors::Error,
+    preprocess::{CmdPreprocessor, Preprocessor},
 };
 use semver::{Version, VersionReq};
 
-pub fn make_app() -> Command {
+use crate::highlight::FruHighlight;
+
+mod highlight;
+
+fn make_app() -> Command {
     Command::new("nop-preprocessor")
         .about("A mdbook preprocessor which does precisely nothing")
         .subcommand(
@@ -31,7 +27,7 @@ fn main() {
     let matches = make_app().get_matches();
 
     // Users will want to construct their own preprocessor here
-    let preprocessor = FruHighlighter::new();
+    let preprocessor = FruHighlight::new();
 
     if let Some(sub_args) = matches.subcommand_matches("supports") {
         handle_supports(&preprocessor, sub_args);
@@ -73,40 +69,5 @@ fn handle_supports(pre: &dyn Preprocessor, sub_args: &ArgMatches) -> ! {
         exit(0);
     } else {
         exit(1);
-    }
-}
-
-
-struct FruHighlighter;
-
-impl FruHighlighter {
-    fn new() -> Self {
-        FruHighlighter
-    }
-}
-
-impl Preprocessor for FruHighlighter {
-    fn name(&self) -> &str {
-        "fru-highlight"
-    }
-
-    fn run(&self, _ctx: &PreprocessorContext, mut book: Book) -> mdbook::errors::Result<Book> {
-        let mut file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open("chapter-lists.txt")?;
-
-        book.for_each_mut(|item| {
-            if let BookItem::Chapter(chapter) = item {
-                file.write_all(chapter.name.as_ref()).expect("TODO: panic message");
-            }
-        });
-
-
-        Ok(book)
-    }
-
-    fn supports_renderer(&self, _renderer: &str) -> bool {
-        true
     }
 }
