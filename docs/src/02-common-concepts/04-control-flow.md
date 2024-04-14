@@ -25,7 +25,7 @@ if age < 12 {
 let age = 16;
 
 print(
-    // this big expression is executed to "teenager"
+    // this big expression is evaluated to "teenager"
     // and then returned to print function
     if age < 12 {
         "child"

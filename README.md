@@ -6,7 +6,7 @@ The main purpose of Frugurt is to present entirely different approach to OOP, th
 
 Example
 
-```
+```frugurt
 let square = fn(x) {
     // if the last expression has no semicolon then it is returned
     x * x
@@ -39,7 +39,7 @@ Also, there are 3 flavors of types:
 There is also builtin data validation, using "watches", see [docs](https://leokostarev.github.io/frugurt-lang/03-object-oriented-programming/06-watches.html).
 
 
-```
+```frugurt
 struct Vector {
     x;
     y;
