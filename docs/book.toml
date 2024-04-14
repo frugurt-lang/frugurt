@@ -4,6 +4,3 @@ language = "en"
 multilingual = false
 src = "src"
 title = "The Frugurt Programming Language"
-
-[preprocessor.fru-highlight]
-command = "fru-highlight"
