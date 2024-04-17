@@ -35,9 +35,9 @@ pub enum FruStatement {
         value: Box<FruExpression>,
     },
     If {
-        cond: Box<FruExpression>,
+        condition: Box<FruExpression>,
         then_body: Box<FruStatement>,
-        else_body: Box<FruStatement>,
+        else_body: Option<Box<FruStatement>>,
     },
     While {
         cond: Box<FruExpression>,
@@ -48,7 +48,7 @@ pub enum FruStatement {
     },
     Break,
     Continue,
-    OperatorDefinition {
+    Operator {
         ident: Identifier,
         commutative: bool,
         left_ident: Identifier,
@@ -123,17 +123,19 @@ impl FruStatement {
             }
 
             FruStatement::If {
-                cond: condition,
-                then_body: then,
-                else_body: else_,
+                condition: cond,
+                then_body,
+                else_body,
             } => {
-                let result = condition.evaluate(scope.clone())?;
+                let result = cond.evaluate(scope.clone())?;
 
                 if let FruValue::Bool(b) = result {
                     if b {
-                        then.execute(scope.clone())
-                    } else {
+                        then_body.execute(scope.clone())
+                    } else if let Some(ref else_) = else_body {
                         else_.execute(scope.clone())
+                    } else {
+                        Control::Nah
                     }
                 } else {
                     FruError::new_control(format!(
@@ -159,7 +161,7 @@ impl FruStatement {
                         }
                     }
                 } {
-                    let res = body.execute(scope.clone())?;
+                    let res = body.execute(scope.clone());
 
                     match res {
                         Control::Nah => {}
@@ -181,7 +183,7 @@ impl FruStatement {
             FruStatement::Break => Control::Break,
             FruStatement::Continue => Control::Continue,
 
-            FruStatement::OperatorDefinition {
+            FruStatement::Operator {
                 ident,
                 commutative,
                 left_ident: left_arg,

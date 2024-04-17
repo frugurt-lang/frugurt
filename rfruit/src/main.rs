@@ -20,9 +20,6 @@ struct Args {
     #[clap(required = true, help = "File to execute")]
     filename: PathBuf,
 
-    #[clap(name = "converter", short, long, help = "Path to converter.exe")]
-    converter_path: Option<PathBuf>,
-
     #[clap(short, long, help = "Print execution time")]
     time: bool,
 }
@@ -32,13 +29,7 @@ fn main() {
 
     let start = Instant::now();
 
-    let result = execute_file(
-        args.filename.as_path(),
-        match &args.converter_path {
-            Some(path) => Some(path.as_path()),
-            None => None,
-        },
-    );
+    let result = execute_file(args.filename.as_path());
 
     if let Err(err) = result {
         println!("{}", err);

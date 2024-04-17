@@ -1,11 +1,12 @@
-pub mod ast_json_parser;
+// pub mod ast_json_parser;
 pub mod builtins;
 pub mod control;
+mod easter_eggs;
 pub mod error;
 pub mod expression;
 pub mod identifier;
 pub mod runner;
-mod easter_eggs;
 pub mod scope;
 pub mod statement;
+pub mod tree_sitter_parser;
 pub mod value;

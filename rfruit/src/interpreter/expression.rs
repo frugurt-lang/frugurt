@@ -45,8 +45,8 @@ pub enum FruExpression {
     },
     If {
         condition: Box<FruExpression>,
-        then_body: Rc<FruExpression>,
-        else_body: Rc<FruExpression>,
+        then_body: Box<FruExpression>,
+        else_body: Box<FruExpression>,
     },
 }
 
