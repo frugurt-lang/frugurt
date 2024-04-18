@@ -4,10 +4,10 @@ use crate::interpreter::{
     error::FruError,
     identifier::Identifier,
     scope::Scope,
-    statement::TypeType,
     value::fru_type::FruType,
     value::fru_value::FruValue,
     value::function::{AnyFunction, FruFunction},
+    value::fru_type::TypeType,
 };
 
 #[derive(Clone)]

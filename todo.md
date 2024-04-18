@@ -7,6 +7,7 @@
 - add `overload` keyword for functions and methods
 - add trait polymorphism for native types
 - add class and data
+- make cd for windows and linux releases
 
 # Needed fixes
 

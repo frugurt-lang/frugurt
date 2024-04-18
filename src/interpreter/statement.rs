@@ -12,6 +12,7 @@ use crate::interpreter::{
     value::fru_watch::FruWatch,
     value::function::FruFunction,
     value::operator::AnyOperator,
+    value::fru_type::TypeType,
 };
 
 #[derive(Debug, Clone)]
@@ -57,7 +58,7 @@ pub enum FruStatement {
         right_type_ident: Identifier,
         body: Rc<FruStatement>,
     },
-    TypeDeclaration {
+    Type {
         type_type: TypeType,
         ident: Identifier,
         fields: Vec<FruField>,
@@ -66,13 +67,6 @@ pub enum FruStatement {
         methods: Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>,
         static_methods: Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TypeType {
-    Struct,
-    // Class, TODO
-    // Data
 }
 
 impl FruStatement {
@@ -208,7 +202,7 @@ impl FruStatement {
                             body: body.clone(),
                             scope: scope.clone(),
                         }
-                        .clone(),
+                            .clone(),
                     );
                 }
 
@@ -224,7 +218,7 @@ impl FruStatement {
 
                 Control::Nah
             }
-            FruStatement::TypeDeclaration {
+            FruStatement::Type {
                 type_type,
                 ident,
                 fields,

@@ -3,11 +3,25 @@ use std::rc::Rc;
 use tree_sitter::Parser;
 use tree_sitter_frugurt;
 
-use crate::interpreter::value::operator::calculate_precedence;
 use crate::interpreter::{
-    expression::FruExpression, identifier::Identifier, statement::FruStatement,
+    value::operator::calculate_precedence,
+    expression::FruExpression,
+    identifier::Identifier,
+    statement::FruStatement,
     value::fru_value::FruValue,
+    value::fru_type::FruField,
 };
+
+enum TypeSection {
+    Impl(Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>),
+    Static(Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>),
+    Constraints(Vec<(Vec<Identifier>, Rc<FruStatement>)>),
+}
+
+enum AnyField {
+    Normal(FruField),
+    Static((FruField, Option<Box<FruExpression>>)),
+}
 
 pub fn parse(data: String) -> Box<FruStatement> {
     let bytes = data.as_bytes();
@@ -22,21 +36,21 @@ pub fn parse(data: String) -> Box<FruStatement> {
 
     let root = tree.root_node();
 
-    Box::new(parse_statement(root, data.as_bytes()))
+    Box::new(dbg!(parse_statement(root, data.as_bytes())))
 }
 
 fn parse_statement(ast: tree_sitter::Node, source: &[u8]) -> FruStatement {
     match ast.grammar_name() {
         "source_file" => FruStatement::Block(
             ast.children_by_field_name("body", &mut ast.walk())
-                .map(|x| parse_statement(x, source))
-                .collect(),
+               .map(|x| parse_statement(x, source))
+               .collect(),
         ),
 
         "block_statement" => FruStatement::Block(
             ast.children_by_field_name("body", &mut ast.walk())
-                .map(|x| parse_statement(x, source))
-                .collect(),
+               .map(|x| parse_statement(x, source))
+               .collect(),
         ),
 
         "expression_statement" => FruStatement::Expression {
@@ -49,9 +63,9 @@ fn parse_statement(ast: tree_sitter::Node, source: &[u8]) -> FruStatement {
         "let_statement" => FruStatement::Let {
             ident: Identifier::new(
                 ast.child_by_field_name("ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
             value: Box::new(parse_expression(
                 ast.child_by_field_name("value").unwrap(),
@@ -62,9 +76,9 @@ fn parse_statement(ast: tree_sitter::Node, source: &[u8]) -> FruStatement {
         "set_statement" => FruStatement::Set {
             ident: Identifier::new(
                 ast.child_by_field_name("ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
             value: Box::new(parse_expression(
                 ast.child_by_field_name("value").unwrap(),
@@ -72,22 +86,27 @@ fn parse_statement(ast: tree_sitter::Node, source: &[u8]) -> FruStatement {
             )),
         },
 
-        "set_field_statement" => FruStatement::SetField {
-            target: Box::new(parse_expression(
-                ast.child_by_field_name("target").unwrap(),
+        "set_field_statement" => {
+            let what = parse_expression(
+                ast.child_by_field_name("what").unwrap(),
                 source,
-            )),
-            field: Identifier::new(
-                ast.child_by_field_name("field")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
-            ),
-            value: Box::new(parse_expression(
+            );
+
+            let value = parse_expression(
                 ast.child_by_field_name("value").unwrap(),
                 source,
-            )),
-        },
+            );
+
+            match what {
+                FruExpression::FieldAccess { what, field } => FruStatement::SetField {
+                    target: what,
+                    field,
+                    value: Box::new(value),
+                },
+
+                _ => panic!("set_field_statement: what is not a field access {:?}", what),
+            }
+        }
 
         "if_statement" => FruStatement::If {
             condition: Box::new(parse_expression(
@@ -128,41 +147,80 @@ fn parse_statement(ast: tree_sitter::Node, source: &[u8]) -> FruStatement {
         "operator_statement" => FruStatement::Operator {
             ident: Identifier::new(
                 ast.child_by_field_name("ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
 
             commutative: ast.child_by_field_name("commutative").is_some(),
             left_ident: Identifier::new(
                 ast.child_by_field_name("left_ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
             left_type_ident: Identifier::new(
                 ast.child_by_field_name("left_type_ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
             right_ident: Identifier::new(
                 ast.child_by_field_name("right_ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
             right_type_ident: Identifier::new(
                 ast.child_by_field_name("right_type_ident")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
             body: Rc::new(parse_function_body(
                 ast.child_by_field_name("body").unwrap(),
                 source,
             )),
         },
+
+        "type_statement" => {
+            let type_type = ast.child_by_field_name("type_type").unwrap()
+                               .utf8_text(source).unwrap().try_into().unwrap();
+            let ident = Identifier::new(ast.child_by_field_name("ident").unwrap().utf8_text(source).unwrap());
+
+            let mut fields = Vec::new();
+            let mut static_fields = Vec::new();
+
+            for field in ast.children_by_field_name("fields", &mut ast.walk())
+                            .map(|x| parse_field(x, source)) {
+                match field {
+                    AnyField::Normal(f) => fields.push(f),
+                    AnyField::Static(f) => static_fields.push(f),
+                }
+            }
+
+            let mut methods = Vec::new();
+            let mut static_methods = Vec::new();
+            let mut watches = Vec::new();
+
+            for section in ast.children_by_field_name("sections", &mut ast.walk()) {
+                match parse_section(section, source) {
+                    TypeSection::Impl(x) => methods.extend(x),
+                    TypeSection::Static(x) => static_methods.extend(x),
+                    TypeSection::Constraints(x) => watches.extend(x),
+                }
+            }
+
+            FruStatement::Type {
+                type_type,
+                ident,
+                fields,
+                static_fields,
+                watches,
+                methods,
+                static_methods,
+            }
+        }
 
         x => unimplemented!("Not a statement: {} {}", x, ast.utf8_text(source).unwrap()),
     }
@@ -207,8 +265,8 @@ fn parse_expression(ast: tree_sitter::Node, source: &[u8]) -> FruExpression {
             )),
             args: {
                 ast.children_by_field_name("args", &mut ast.walk())
-                    .map(|x| parse_expression(x, source))
-                    .collect()
+                   .map(|x| parse_expression(x, source))
+                   .collect()
             },
         },
 
@@ -219,8 +277,8 @@ fn parse_expression(ast: tree_sitter::Node, source: &[u8]) -> FruExpression {
             )),
             args: {
                 ast.children_by_field_name("args", &mut ast.walk())
-                    .map(|x| parse_expression(x, source))
-                    .collect()
+                   .map(|x| parse_expression(x, source))
+                   .collect()
             },
         },
 
@@ -260,10 +318,10 @@ fn parse_expression(ast: tree_sitter::Node, source: &[u8]) -> FruExpression {
                     let ident = match cursor.current() {
                         None => break,
                         Some(Elem::BinOp { precedence, ident })
-                            if *precedence == target_precedence =>
-                        {
-                            *ident
-                        }
+                        if *precedence == target_precedence =>
+                            {
+                                *ident
+                            }
                         _ => {
                             cursor.move_next();
                             continue;
@@ -315,8 +373,8 @@ fn parse_expression(ast: tree_sitter::Node, source: &[u8]) -> FruExpression {
             )),
             args: {
                 ast.children_by_field_name("args", &mut ast.walk())
-                    .map(|x| parse_expression(x, source))
-                    .collect()
+                   .map(|x| parse_expression(x, source))
+                   .collect()
             },
         },
 
@@ -327,9 +385,9 @@ fn parse_expression(ast: tree_sitter::Node, source: &[u8]) -> FruExpression {
             )),
             field: Identifier::new(
                 ast.child_by_field_name("field")
-                    .unwrap()
-                    .utf8_text(source)
-                    .unwrap(),
+                   .unwrap()
+                   .utf8_text(source)
+                   .unwrap(),
             ),
         },
 
@@ -366,4 +424,77 @@ fn parse_function_body(ast: tree_sitter::Node, source: &[u8]) -> FruStatement {
         },
         _ => unimplemented!("Not a function body: {}", ast.grammar_name()),
     }
+}
+
+fn parse_field(ast: tree_sitter::Node, source: &[u8]) -> AnyField {
+    let is_public = ast.child_by_field_name("pub").is_some();
+    let is_static = ast.child_by_field_name("static").is_some();
+    let ident = Identifier::new(ast.child_by_field_name("ident").unwrap()
+                                   .utf8_text(source).unwrap());
+    let type_ident = ast.child_by_field_name("type_ident")
+                        .map(|x| Identifier::new(x.utf8_text(source).unwrap()));
+    let value = ast.child_by_field_name("value")
+                   .map(|x| parse_expression(x, source));
+
+    if !is_static && value.is_some() {
+        let f = ast.child_by_field_name("value").unwrap();
+        panic!("Non-static field {} at {}-{} cannot have an default value", ident,
+               f.start_position(),
+               f.end_position(),
+        );
+    }
+
+    let res = FruField {
+        is_public,
+        ident,
+        type_ident,
+    };
+
+    if is_static {
+        AnyField::Static((res, value.map(Box::new)))
+    } else {
+        AnyField::Normal(res)
+    }
+}
+
+fn parse_section(ast: tree_sitter::Node, source: &[u8]) -> TypeSection {
+    match ast.grammar_name() {
+        "type_impl_section" => {
+            TypeSection::Impl(
+                ast.children_by_field_name("methods", &mut ast.walk())
+                   .map(|x| parse_method(x, source)).collect()
+            )
+        }
+        "type_static_section" => {
+            TypeSection::Static(
+                ast.children_by_field_name("methods", &mut ast.walk())
+                   .map(|x| parse_method(x, source)).collect()
+            )
+        }
+        "type_constraints_section" => {
+            TypeSection::Constraints(
+                ast.children_by_field_name("watches", &mut ast.walk())
+                   .map(|x| parse_watch(x, source)).collect()
+            )
+        }
+
+        _ => unimplemented!("Not a section: {}", ast.grammar_name()),
+    }
+}
+
+fn parse_method(ast: tree_sitter::Node, source: &[u8]) -> (Identifier, Vec<Identifier>, Rc<FruStatement>) {
+    let ident = Identifier::new(ast.child_by_field_name("ident").unwrap().utf8_text(source).unwrap());
+    let args = ast.children_by_field_name("args", &mut ast.walk())
+                  .map(|x| Identifier::new(x.utf8_text(source).unwrap())).collect();
+    let body = Rc::new(parse_function_body(ast.child_by_field_name("body").unwrap(), source));
+    (ident, args, body)
+}
+
+fn parse_watch(ast: tree_sitter::Node, source: &[u8]) -> (Vec<Identifier>, Rc<FruStatement>) {
+    let args = ast.children_by_field_name("args", &mut ast.walk())
+                  .map(|x| Identifier::new(x.utf8_text(source).unwrap())).collect();
+
+    let body = Rc::new(parse_statement(ast.child_by_field_name("body").unwrap(), source));
+
+    (args, body)
 }
