@@ -12,6 +12,7 @@ use crate::interpreter::{
     value::fru_watch::FruWatch,
     value::function::FruFunction,
     value::operator::AnyOperator,
+    value::fru_type::TypeType,
 };
 
 #[derive(Debug, Clone)]
@@ -35,9 +36,9 @@ pub enum FruStatement {
         value: Box<FruExpression>,
     },
     If {
-        cond: Box<FruExpression>,
+        condition: Box<FruExpression>,
         then_body: Box<FruStatement>,
-        else_body: Box<FruStatement>,
+        else_body: Option<Box<FruStatement>>,
     },
     While {
         cond: Box<FruExpression>,
@@ -48,7 +49,7 @@ pub enum FruStatement {
     },
     Break,
     Continue,
-    OperatorDefinition {
+    Operator {
         ident: Identifier,
         commutative: bool,
         left_ident: Identifier,
@@ -57,7 +58,7 @@ pub enum FruStatement {
         right_type_ident: Identifier,
         body: Rc<FruStatement>,
     },
-    TypeDeclaration {
+    Type {
         type_type: TypeType,
         ident: Identifier,
         fields: Vec<FruField>,
@@ -66,13 +67,6 @@ pub enum FruStatement {
         methods: Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>,
         static_methods: Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>,
     },
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TypeType {
-    Struct,
-    // Class, TODO
-    // Data
 }
 
 impl FruStatement {
@@ -123,17 +117,19 @@ impl FruStatement {
             }
 
             FruStatement::If {
-                cond: condition,
-                then_body: then,
-                else_body: else_,
+                condition: cond,
+                then_body,
+                else_body,
             } => {
-                let result = condition.evaluate(scope.clone())?;
+                let result = cond.evaluate(scope.clone())?;
 
                 if let FruValue::Bool(b) = result {
                     if b {
-                        then.execute(scope.clone())
-                    } else {
+                        then_body.execute(scope.clone())
+                    } else if let Some(ref else_) = else_body {
                         else_.execute(scope.clone())
+                    } else {
+                        Control::Nah
                     }
                 } else {
                     FruError::new_control(format!(
@@ -159,7 +155,7 @@ impl FruStatement {
                         }
                     }
                 } {
-                    let res = body.execute(scope.clone())?;
+                    let res = body.execute(scope.clone());
 
                     match res {
                         Control::Nah => {}
@@ -181,7 +177,7 @@ impl FruStatement {
             FruStatement::Break => Control::Break,
             FruStatement::Continue => Control::Continue,
 
-            FruStatement::OperatorDefinition {
+            FruStatement::Operator {
                 ident,
                 commutative,
                 left_ident: left_arg,
@@ -206,7 +202,7 @@ impl FruStatement {
                             body: body.clone(),
                             scope: scope.clone(),
                         }
-                        .clone(),
+                            .clone(),
                     );
                 }
 
@@ -222,7 +218,7 @@ impl FruStatement {
 
                 Control::Nah
             }
-            FruStatement::TypeDeclaration {
+            FruStatement::Type {
                 type_type,
                 ident,
                 fields,

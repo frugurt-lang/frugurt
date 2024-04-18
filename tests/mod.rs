@@ -18,5 +18,5 @@ pub fn run(code: &str) {
         .expect("failed to write to temporary file");
     file.flush().unwrap();
 
-    execute_file(file.path(), None).expect("no errors");
+    execute_file(file.path()).unwrap();
 }

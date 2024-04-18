@@ -4,7 +4,6 @@ use crate::interpreter::{
     error::FruError,
     identifier::Identifier,
     scope::Scope,
-    statement::TypeType,
     value::fru_object::FruObject,
     value::fru_value::FruValue,
     value::fru_watch::FruWatch,
@@ -21,7 +20,8 @@ pub struct FruTypeInternal {
     pub ident: Identifier,
     pub type_type: TypeType,
     pub fields: Vec<FruField>,
-    pub static_fields: RefCell<HashMap<Identifier, FruValue>>, // TODO: change for FruField?
+    pub static_fields: RefCell<HashMap<Identifier, FruValue>>,
+    // TODO: change for FruField?
     pub watches_by_field: HashMap<Identifier, Vec<FruWatch>>,
     pub watches: Vec<FruWatch>,
     pub methods: HashMap<Identifier, FruFunction>,
@@ -34,6 +34,13 @@ pub struct FruField {
     pub is_public: bool,
     pub ident: Identifier,
     pub type_ident: Option<Identifier>, // useless for now
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TypeType {
+    Struct,
+    // Class, TODO
+    // Data
 }
 
 impl FruType {
@@ -120,6 +127,17 @@ impl FruType {
         } // todo fire watches
 
         Ok(FruObject::new_object(self.clone(), args))
+    }
+}
+
+impl TryFrom<&str> for TypeType {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "struct" => Ok(TypeType::Struct),
+            _ => Err(()),
+        }
     }
 }
 

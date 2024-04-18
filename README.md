@@ -1,8 +1,9 @@
-### Frugurt is interpreted language, with focus on functional and OOP.
+### Frugurt is an interpreted language, with focus on functional and OOP.
 
 > It is proof of concept, showing interesting features, in active development still
 
-The main purpose of Frugurt is to present entirely different approach to OOP, than in other languages like Python or JavaScript.
+The main purpose of Frugurt is to present an entirely different approach to OOP,
+compared to other languages like Python or JavaScript.
 
 Example
 
@@ -30,14 +31,14 @@ All types have fixed schema, that means:
 - All fields must be declared at once
 - Any other fields can never be declared
 
-Also, there are 3 flavors of types:
+Also, there are three flavors of types:
 
 - struct - mutable, passed by value
 - class - mutable, passed by reference
 - data - immutable, passed by reference
 
-There is also builtin data validation, using "watches", see [docs](https://leokostarev.github.io/frugurt-lang/03-object-oriented-programming/06-watches.html).
-
+There is also builtin data validation, using "watches",
+see [docs](https://frugurt-lang.github.io/frugurt/03-object-oriented-programming/06-watches.html).
 
 ```frugurt
 struct Vector {
