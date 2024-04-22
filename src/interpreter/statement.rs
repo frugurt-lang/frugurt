@@ -45,7 +45,7 @@ pub enum FruStatement {
         body: Box<FruStatement>,
     },
     Return {
-        value: Box<FruExpression>,
+        value: Option<Box<FruExpression>>,
     },
     Break,
     Continue,
@@ -170,8 +170,12 @@ impl FruStatement {
             }
 
             FruStatement::Return { value } => {
-                let v = value.evaluate(scope)?;
-                Control::Return(v)
+                Control::Return(
+                    match value {
+                        Some(x) => x.evaluate(scope)?,
+                        None => FruValue::Nah
+                    }
+                )
             }
 
             FruStatement::Break => Control::Break,
