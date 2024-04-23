@@ -13,3 +13,4 @@
 
 - move method creation from execution to parsing
 - implement Display for FruValue and fix for FruObject
+- remove of fix BACKWARDS_MAP in Identifier (can cause problems in testing with some probability)
