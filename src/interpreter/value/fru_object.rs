@@ -5,9 +5,9 @@ use crate::interpreter::{
     identifier::Identifier,
     scope::Scope,
     value::fru_type::FruType,
+    value::fru_type::TypeType,
     value::fru_value::FruValue,
     value::function::{AnyFunction, FruFunction},
-    value::fru_type::TypeType,
 };
 
 #[derive(Clone)]
@@ -65,6 +65,10 @@ impl FruObject {
     }
 
     pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
+        if self.get_type().get_type_type() == TypeType::Data {
+            return FruError::new_unit_slice("cannot set field in 'data' type");
+        }
+
         let pos = self.get_type().get_field_k(ident);
 
         let pos = match pos {
@@ -92,29 +96,33 @@ impl FruObject {
     pub fn fru_clone(&self) -> FruValue {
         let tt = self.get_type().get_type_type();
 
-        if tt == TypeType::Struct {
-            FruObject::new_object(
-                self.get_type().clone(),
-                self.internal
-                    .fields
-                    .borrow()
-                    .iter()
-                    .map(|x| x.fru_clone())
-                    .collect(),
-            )
-        } else {
-            unimplemented!();
+        match tt {
+            TypeType::Struct => {
+                FruObject::new_object(
+                    self.get_type(),
+                    self.internal
+                        .fields
+                        .borrow()
+                        .iter()
+                        .map(FruValue::fru_clone)
+                        .collect(),
+                )
+            }
+            TypeType::Class | TypeType::Data => FruValue::Object(self.clone()),
         }
     }
 }
 
 impl PartialEq for FruObject {
     fn eq(&self, other: &Self) -> bool {
-        if self.get_type().get_type_type() == TypeType::Struct {
-            self.internal.fields == other.internal.fields
-        } else {
-            unimplemented!()
+        if self.get_type() != other.get_type() {
+            return false;
         }
+        // TODO: check both ways of comparison
+        // self.internal.fields.borrow().iter().zip(
+        //     other.internal.fields.borrow().iter()
+        // ).map(|(x, y)| x == y).all(identity)
+        self.internal.fields == other.internal.fields
     }
 }
 

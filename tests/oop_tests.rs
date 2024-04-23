@@ -67,6 +67,68 @@ fn test_vector() {
 }
 
 #[test]
+fn test_struct() {
+    run(r#"
+            struct Box {
+                f;
+            }
+            
+            let b = Box :{ 5 };
+            t_eq(b.f, 5);
+            
+            b.f = 10;
+            t_eq(b.f, 10);
+            
+            let b2 = b;
+            
+            t_eq(b2.f, 10);
+            
+            b2.f = 20;
+            t_eq(b.f, 10);
+            t_eq(b2.f, 20);
+        "#)
+}
+
+#[test]
+fn test_class() {
+    run(r#"
+            class Box {
+                f;
+            }
+            
+            let b = Box :{ 5 };
+            t_eq(b.f, 5);
+            
+            b.f = 10;
+            t_eq(b.f, 10);
+            
+            let b2 = b;
+            
+            t_eq(b2.f, 10);
+            
+            b2.f = 20;
+            t_eq(b.f, 20);
+            t_eq(b2.f, 20);
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_data() {
+    run(r#"
+            data Box {
+                f;
+            }
+            
+            let b = Box :{ 5 };
+            t_eq(b.f, 5);
+            
+            b.f = 10;
+        "#)
+}
+
+
+#[test]
 fn test_operators() {
     run(r#"
             struct Vec2 {

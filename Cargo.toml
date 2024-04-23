@@ -12,7 +12,7 @@ serde_json = "1.0.115"
 thiserror = "1.0.58"
 tree-sitter = "0.22.5"
 proc-macro2 = "1.0.78"
-tree-sitter-frugurt = "0.0.3"
+tree-sitter-frugurt = "0.0.4"
 #tree-sitter-frugurt = { path = "../tree-sitter-frugurt" }
 
 [dev-dependencies]

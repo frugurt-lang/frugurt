@@ -27,6 +27,12 @@ impl FruError {
         Err(FruError { message })
     }
 
+    pub fn new_unit_slice(message: &str) -> Result<(), FruError> {
+        Err(FruError {
+            message: message.to_string(),
+        })
+    }
+
     pub fn new_control(message: String) -> Control {
         Control::Error(FruError { message })
     }

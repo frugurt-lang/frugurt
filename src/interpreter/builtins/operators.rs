@@ -100,6 +100,7 @@ fn num_div_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
 
     unreachable!();
 }
+
 fn num_mod_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::Number(l), FruValue::Number(r)) = (left, right) {
         if r == 0.0 {
@@ -110,6 +111,7 @@ fn num_mod_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
 
     unreachable!();
 }
+
 fn num_pow_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::Number(l), FruValue::Number(r)) = (left, right) {
         return Ok(FruValue::Number(l.powf(r)));

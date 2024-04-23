@@ -39,8 +39,8 @@ pub struct FruField {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TypeType {
     Struct,
-    // Class, TODO
-    // Data
+    Class,
+    Data,
 }
 
 impl FruType {
@@ -127,17 +127,6 @@ impl FruType {
         } // todo fire watches
 
         Ok(FruObject::new_object(self.clone(), args))
-    }
-}
-
-impl TryFrom<&str> for TypeType {
-    type Error = ();
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "struct" => Ok(TypeType::Struct),
-            _ => Err(()),
-        }
     }
 }
 
