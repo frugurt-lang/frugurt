@@ -5,7 +5,10 @@ use crate::interpreter::{control::Control, error::FruError, scope::Scope, tree_s
 pub fn execute_file(path: &Path) -> Result<Rc<Scope>, FruError> {
     let source_code = std::fs::read_to_string(path).unwrap();
 
-    let ast = tree_sitter_parser::parse(source_code).unwrap();
+    let ast = match tree_sitter_parser::parse(source_code) {
+        Ok(ast) => ast,
+        Err(e) => return Err(FruError::new(format!("{}", e)))
+    };
 
     let global_scope = Scope::new_global();
 

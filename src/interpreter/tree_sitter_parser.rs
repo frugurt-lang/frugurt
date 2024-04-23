@@ -27,9 +27,19 @@ pub enum ParseError {
     },
 
     #[error("Utf8 decoding error")]
-    Utf8Decode {
+    Utf8Error {
         position: Range,
         error: Utf8Error,
+    },
+
+    #[error("Parsing error from {}:{} to {}:{}",
+    .position.start_point.row + 1,
+    .position.start_point.column,
+    .position.end_point.row + 1,
+    .position.end_point.column)]
+    ParsingError {
+        position: Range,
+        error: String,
     },
 }
 
@@ -64,7 +74,7 @@ impl NodeExtension for Node<'_> {
     fn text<'a>(&self, source: &'a [u8]) -> Result<&'a str, ParseError> {
         match self.utf8_text(source) {
             Ok(x) => Ok(x),
-            Err(e) => Err(ParseError::Utf8Decode {
+            Err(e) => Err(ParseError::Utf8Error {
                 position: self.range(),
                 error: e,
             })
@@ -73,7 +83,7 @@ impl NodeExtension for Node<'_> {
 }
 
 pub fn parse(data: String) -> Result<Box<FruStatement>, ParseError> {
-    let bytes = data.as_bytes();
+    let source = data.as_bytes();
 
     let mut parser = Parser::new();
 
@@ -81,22 +91,55 @@ pub fn parse(data: String) -> Result<Box<FruStatement>, ParseError> {
         .set_language(&tree_sitter_frugurt::language())
         .expect("Error loading Frugurt grammar");
 
-    let tree = parser.parse(bytes, None).unwrap();
+    let tree = parser.parse(source, None).unwrap();
 
     let root = tree.root_node();
 
-    parse_statement(root, bytes).map(Box::new)
+    if root.has_error() {
+        search_for_errors(root)?;
+    }
+
+    parse_statement(root, source).map(Box::new)
+}
+
+fn search_for_errors(ast: Node) -> Result<(), ParseError> {
+    let mut cur = ast.walk();
+
+    loop {
+        if cur.node().is_error() {
+            return Err(ParseError::ParsingError {
+                position: cur.node().range(),
+                error: cur.node().to_sexp(),
+            });
+        }
+
+        if cur.goto_first_child() {
+            continue;
+        }
+
+        if cur.goto_next_sibling() {
+            continue;
+        }
+
+        if cur.goto_parent() {
+            cur.goto_next_sibling();
+        } else {
+            break;
+        }
+    }
+
+    Ok(())
 }
 
 
-fn remap_statement(x: Result<Node, ParseError>, source: &[u8]) -> Result<Option<FruStatement>, ParseError> {
+fn option_statement(x: Result<Node, ParseError>, source: &[u8]) -> Result<Option<FruStatement>, ParseError> {
     Ok(match x {
         Ok(x) => Some(parse_statement(x, source)?),
         Err(_) => None,
     })
 }
 
-fn remap_expression(x: Result<Node, ParseError>, source: &[u8]) -> Result<Option<FruExpression>, ParseError> {
+fn option_expression(x: Result<Node, ParseError>, source: &[u8]) -> Result<Option<FruExpression>, ParseError> {
     Ok(match x {
         Ok(x) => Some(parse_expression(x, source)?),
         Err(_) => None,
@@ -185,7 +228,7 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
                 ast.get_child("then_body")?,
                 source,
             )?;
-            let else_body = remap_statement(
+            let else_body = option_statement(
                 ast.get_child("else_body"),
                 source,
             )?;
@@ -213,7 +256,7 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
         },
 
         "return_statement" => FruStatement::Return {
-            value: remap_expression(
+            value: option_expression(
                 ast.get_child("value"),
                 source,
             )?.map(Box::new),
@@ -527,7 +570,7 @@ fn parse_field(ast: Node, source: &[u8]) -> Result<AnyField, ParseError> {
         .text(source)?);
     let type_ident = ast.get_child("type_ident")
                         .ok().map(|x| x.text(source).map(Identifier::new)).transpose()?;
-    let value = remap_expression(
+    let value = option_expression(
         ast.get_child("value"),
         source)?;
 
