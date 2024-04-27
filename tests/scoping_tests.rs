@@ -6,10 +6,10 @@ fn test_block() {
             let a = 1;
             {
                 let a = 5;
-                a= 7;
-                t_eq(a, 7);
+                a = 7;
+                assert_eq(a, 7);
             }
-            t_eq(a, 1);
+            assert_eq(a, 1);
         "#)
 }
 
@@ -19,9 +19,9 @@ fn test_if() {
             let a = 1;
             if true {
                 let a = 5;
-                t_eq(a, 5);
+                assert_eq(a, 5);
             }
-            t_eq(a, 1);
+            assert_eq(a, 1);
         "#)
 }
 
@@ -33,9 +33,9 @@ fn test_if_else() {
                 a = 7;
             } else {
                 let a = 5;
-                t_eq(a, 5);
+                assert_eq(a, 5);
             }
-            t_eq(a, 1);
+            assert_eq(a, 1);
         "#)
 }
 
@@ -49,7 +49,7 @@ fn test_while() {
                 s = s + a;
             }
             
-            t_eq(s, -6);
+            assert_eq(s, -6);
         "#)
 }
 
@@ -59,7 +59,7 @@ fn test_function1() {
             let a = 5;
             let f = fn () { a = 7; };
             f();
-            t_eq(a, 7);
+            assert_eq(a, 7);
         "#)
 }
 
@@ -69,7 +69,7 @@ fn test_function2() {
             let a = 5;
             let f = fn () { let a = 7; };
             f();
-            t_eq(a, 5);
+            assert_eq(a, 5);
         "#)
 }
 

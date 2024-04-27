@@ -5,6 +5,7 @@ use std::{
     str::Utf8Error,
 };
 
+use snailquote::unescape;
 use thiserror::Error;
 use tree_sitter::{Node, Parser, Range};
 use tree_sitter_frugurt;
@@ -35,7 +36,8 @@ pub enum ParseError {
     },
 
     // in theory could never happen
-    #[error("ast is not valid at {}:{}-{}:{}",
+    #[error("{} at {}:{}-{}:{}",
+    .error,
     .position.start_point.row + 1,
     .position.start_point.column,
     .position.end_point.row + 1,
@@ -393,7 +395,13 @@ fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseErro
 
         "string_literal" => {
             let s = ast.text(source)?;
-            FruExpression::Literal(FruValue::String(s[1..s.len() - 1].to_string()))
+            match unescape(&s.replace("\\\n", "\n")) {
+                Ok(s) => FruExpression::Literal(FruValue::String(s)),
+                Err(e) => return Err(ParseError::InvalidAst {
+                    position: ast.range(),
+                    error: e.to_string(),
+                })
+            }
         }
 
         "variable" => FruExpression::Variable(Identifier::new(
@@ -447,16 +455,13 @@ fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseErro
 
             let mut all_precedences = BTreeSet::new();
 
-            for i in 0..ast.named_child_count() {
+            for (i, node) in ast.children_by_field_name("content", &mut ast.walk()).enumerate() {
                 if i % 2 == 0 {
                     list.push_back(Elem::Expr(
-                        parse_expression(
-                            ast.named_child(i).unwrap(),
-                            source,
-                        )?
+                        parse_expression(node, source)?
                     ));
                 } else {
-                    let op = ast.named_child(i).unwrap().text(source)?;
+                    let op = node.text(source)?;
                     let precedence = calculate_precedence(op);
 
                     all_precedences.insert(precedence);

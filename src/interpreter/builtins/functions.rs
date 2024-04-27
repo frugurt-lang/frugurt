@@ -24,9 +24,9 @@ pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
             })),
         ),
         (
-            Identifier::new("t_eq"),
+            Identifier::new("assert_eq"),
             FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction {
-                function: b_t_eq,
+                function: b_assert_eq,
                 argument_count: ArgCount::Exact(2),
             })),
         ),
@@ -53,10 +53,10 @@ fn b_input(args: Vec<FruValue>) -> Result<FruValue, FruError> {
     Ok(FruValue::String(input.trim().to_string()))
 }
 
-fn b_t_eq(args: Vec<FruValue>) -> Result<FruValue, FruError> {
+fn b_assert_eq(args: Vec<FruValue>) -> Result<FruValue, FruError> {
     if args[0] == args[1] {
         Ok(FruValue::Bool(true))
     } else {
-        panic!("TEST FAILED: {:?} != {:?}", args[0], args[1]);
+        FruError::new_val(format!("assertion failed: {:?} != {:?}", args[0], args[1]))
     }
 }

@@ -11,8 +11,8 @@ fn test_function1() {
                 x + y + {x * y}
             };
             
-            t_eq(func(1, 2), 5);
-            t_eq(func_same(5, 5), 35);
+            assert_eq(func(1, 2), 5);
+            assert_eq(func_same(5, 5), 35);
         "#)
 }
 
@@ -31,8 +31,8 @@ fn test_function_decorator() {
             
             func = decorator(func);
             
-            t_eq(func(2, 1), 6);
-            t_eq(func(6, 4), 36);
+            assert_eq(func(2, 1), 6);
+            assert_eq(func(6, 4), 36);
         "#)
 }
 
@@ -47,7 +47,7 @@ fn test_function_nested() {
                 tr2(tr1(1))
             };
             
-            t_eq(comp(6), 42);
+            assert_eq(comp(6), 42);
     "#)
 }
 
@@ -58,11 +58,11 @@ fn test_curry() {
             
             let g = f$(1);
             
-            t_eq(g(2, 3), 6);
+            assert_eq(g(2, 3), 6);
             
-            t_eq(f(1, 2, 3), 6);
+            assert_eq(f(1, 2, 3), 6);
             
-            t_eq(g$(2)(5), 8);
+            assert_eq(g$(2)(5), 8);
         "#)
 }
 
@@ -77,6 +77,6 @@ fn test_overall() {
             
             let g = dec(f);
             
-            t_eq(g(1)(2), 3);
+            assert_eq(g(1)(2), 3);
         "#)
 }

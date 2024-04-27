@@ -16,13 +16,13 @@ fn test_box() {
             }
             
             let b = Box :{ 5 };
-            t_eq(b.fe, 5);
+            assert_eq(b.fe, 5);
             
-            t_eq(Box.val, 5);
+            assert_eq(Box.val, 5);
             
             b.fe = 10;
-            t_eq(b.fe, 10);
-            t_eq(b.val, 10);
+            assert_eq(b.fe, 10);
+            assert_eq(b.val, 10);
         "#)
 }
 
@@ -55,14 +55,14 @@ fn test_vector() {
             let v = Vec2 :{ 1, 2 };
             
             v.swap();
-            t_eq(v.x, 2);
+            assert_eq(v.x, 2);
             
             v.mul();
-            t_eq(v.y, 10);
+            assert_eq(v.y, 10);
             
             let v2 = Vec2.new45(5);
             
-            t_eq(v2.y, 5);
+            assert_eq(v2.y, 5);
         "#)
 }
 
@@ -74,18 +74,18 @@ fn test_struct() {
             }
             
             let b = Box :{ 5 };
-            t_eq(b.f, 5);
+            assert_eq(b.f, 5);
             
             b.f = 10;
-            t_eq(b.f, 10);
+            assert_eq(b.f, 10);
             
             let b2 = b;
             
-            t_eq(b2.f, 10);
+            assert_eq(b2.f, 10);
             
             b2.f = 20;
-            t_eq(b.f, 10);
-            t_eq(b2.f, 20);
+            assert_eq(b.f, 10);
+            assert_eq(b2.f, 20);
         "#)
 }
 
@@ -97,18 +97,18 @@ fn test_class() {
             }
             
             let b = Box :{ 5 };
-            t_eq(b.f, 5);
+            assert_eq(b.f, 5);
             
             b.f = 10;
-            t_eq(b.f, 10);
+            assert_eq(b.f, 10);
             
             let b2 = b;
             
-            t_eq(b2.f, 10);
+            assert_eq(b2.f, 10);
             
             b2.f = 20;
-            t_eq(b.f, 20);
-            t_eq(b2.f, 20);
+            assert_eq(b.f, 20);
+            assert_eq(b2.f, 20);
         "#)
 }
 
@@ -121,7 +121,7 @@ fn test_data() {
             }
             
             let b = Box :{ 5 };
-            t_eq(b.f, 5);
+            assert_eq(b.f, 5);
             
             b.f = 10;
         "#)
@@ -151,11 +151,11 @@ fn test_operators() {
             let v1 = Vec2 :{ 1, 2 };
             let v2 = Vec2 :{ 3, 4 };
                         
-            t_eq(v1 + v2, Vec2 :{ 4, 6 });
+            assert_eq(v1 + v2, Vec2 :{ 4, 6 });
             
-            t_eq(v1 * 2, Vec2 :{ 2, 4 });
-            t_eq(5 * v1 * 2, Vec2 :{ 10, 20 });
+            assert_eq(v1 * 2, Vec2 :{ 2, 4 });
+            assert_eq(5 * v1 * 2, Vec2 :{ 10, 20 });
             
-            t_eq(6 +-*/%=<>&|^!? 9, 54);
+            assert_eq(6 +-*/%=<>&|^!? 9, 54);
         "#)
 }

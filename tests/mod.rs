@@ -3,7 +3,7 @@ mod function_tests;
 mod oop_tests;
 mod operators_tests;
 mod scoping_tests;
-mod variable_tests;
+mod value_tests;
 
 use crate::execute_file;
 
