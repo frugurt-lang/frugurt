@@ -4,3 +4,18 @@ language = "en"
 multilingual = false
 src = "src"
 title = "The Frugurt Programming Language"
+
+[build]
+extra-watch-dirs = ["highlighter"]
+
+[output.html]
+additional-js = [
+    "highlighter/tree-sitter.js",
+    "highlighter/highlighter-info.js",
+    "highlighter/highlighter.js"
+]
+# forgive me for this horror
+additional-css = [
+    "highlighter/tree-sitter.wasm",
+    "highlighter/tree-sitter-frugurt.wasm"
+]
