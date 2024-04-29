@@ -4,7 +4,7 @@ let FrugurtParser = null;
 window.TreeSitter.init().then(async () => {
     if (FrugurtParser == null) {
         FrugurtParser = new window.TreeSitter();
-        FrugurtLang = await window.TreeSitter.Language.load("/highlighter/tree-sitter-frugurt.wasm");
+        FrugurtLang = await window.TreeSitter.Language.load("../highlighter/tree-sitter-frugurt.wasm");
         FrugurtParser.setLanguage(FrugurtLang);
         window.highlighterInfo.query = FrugurtLang.query(window.highlighterInfo.queryString);
     }
