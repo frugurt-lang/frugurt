@@ -10,7 +10,7 @@ let f = fn (x) {
 print(f(5)); // 6
 ```
 
-Functions can take other functions as arguments and they capture their scope.
+Functions can take other functions as arguments, and they capture their scope.
 
 ```frugurt
 let f = fn (x) {
@@ -40,4 +40,4 @@ f = decorator(f);
 print(f(5)); // 20
 ```
 
-Functions can be curried, will talk about in in the next chapter.
+Functions can be curried, will talk about in the next chapter.

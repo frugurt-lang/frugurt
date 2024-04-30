@@ -1,6 +1,6 @@
 # Watches
 
-Fields can be verified using watches. They are essentially methods, that run when a fields is assigned.
+Fields can be verified using watches. They are essentially methods that run when a field is assigned.
 
 ```frugurt
 struct Vector {

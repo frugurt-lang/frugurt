@@ -1,14 +1,15 @@
 # Basics
 
-types come in 3 flavors:
+Types come in 3 flavors:
 
 - `struct` - mutable, copied by value
-- `class` - mutable, copied by reference (NOT IMPLEMENTED)
-- `data` - immutable, copied by reference (NOT IMPLEMENTED)
+- `class` - mutable, copied by reference
+- `data` - immutable, copied by reference
 
 ```frugurt
 struct Vector {
-    // fields can be marked public or/and annotated with type, but this does not change semantics(now)
+    // fields can be marked public or/and annotated with type,
+    // but this does not change semantics(now)
     x;
     pub y : Number;
 }

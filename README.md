@@ -1,6 +1,6 @@
 ### Frugurt is an interpreted language, with focus on functional and OOP.
 
-> It is proof of concept, showing interesting features, in active development still
+> It is proof-of-concept, showing interesting features in active development still
 
 The main purpose of Frugurt is to present an entirely different approach to OOP,
 compared to other languages like Python or JavaScript.

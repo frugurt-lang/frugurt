@@ -130,12 +130,11 @@ impl Debug for FruObject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}{{", self.get_type())?;
 
-        let fields = self.get_type().get_internal().fields.len();
+        let fields = self.get_type().get_fields().len();
 
         for (k, (field, value)) in self
             .get_type()
-            .get_internal()
-            .fields
+            .get_fields()
             .iter()
             .zip(self.internal.fields.borrow().iter())
             .enumerate()
