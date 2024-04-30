@@ -58,15 +58,15 @@ impl FruType {
         self.internal.type_type
     }
 
-    pub fn get_internal(&self) -> Rc<FruTypeInternal> {
-        self.internal.clone()
+    pub fn get_fields(&self) -> &[FruField] {
+        self.internal.fields.as_slice()
     }
 
     pub fn get_watches_by_field(&self, ident: Identifier) -> Vec<FruWatch> {
         self.internal
             .watches_by_field
             .get(&ident)
-            .map_or_else(Vec::new, |w| w.clone()) // FIXME: clone overhead
+            .map_or_else(Vec::new, Vec::clone) // FIXME: clone overhead
     }
 
     pub fn get_scope(&self) -> Rc<Scope> {
