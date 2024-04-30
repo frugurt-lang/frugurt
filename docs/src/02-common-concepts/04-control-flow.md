@@ -1,6 +1,6 @@
 # Control Flow
 
-The control flow in Frugurt can be implemented both using statements and expressions.
+The control flow in Frugurt can be implemented using both statements and expressions.
 
 
 
