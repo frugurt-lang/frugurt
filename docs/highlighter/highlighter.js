@@ -1,3 +1,5 @@
+// noinspection JSUnresolvedReference
+
 let FrugurtLang = null;
 let FrugurtParser = null;
 

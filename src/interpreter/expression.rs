@@ -12,8 +12,16 @@ use crate::interpreter::{
 
 #[derive(Debug, Clone)]
 pub enum FruExpression {
-    Literal(FruValue),
-    Variable(Identifier),
+    Literal {
+        value: FruValue
+    },
+    Variable {
+        ident: Identifier
+    },
+    Function {
+        args: Vec<Identifier>,
+        body: Rc<FruStatement>,
+    },
     Block {
         body: Vec<FruStatement>,
         expr: Box<FruExpression>,
@@ -26,15 +34,6 @@ pub enum FruExpression {
         what: Box<FruExpression>,
         args: Vec<FruExpression>,
     },
-    Binary {
-        operator: Identifier,
-        left: Box<FruExpression>,
-        right: Box<FruExpression>,
-    },
-    Function {
-        args: Vec<Identifier>,
-        body: Rc<FruStatement>,
-    },
     Instantiation {
         what: Box<FruExpression>,
         args: Vec<FruExpression>,
@@ -42,6 +41,11 @@ pub enum FruExpression {
     FieldAccess {
         what: Box<FruExpression>,
         field: Identifier,
+    },
+    Binary {
+        operator: Identifier,
+        left: Box<FruExpression>,
+        right: Box<FruExpression>,
     },
     If {
         condition: Box<FruExpression>,
@@ -59,9 +63,19 @@ fn eval_args(args: &[FruExpression], scope: Rc<Scope>) -> Result<Vec<FruValue>, 
 impl FruExpression {
     pub fn evaluate(&self, mut scope: Rc<Scope>) -> Result<FruValue, Control> {
         match self {
-            FruExpression::Literal(value) => Ok(value.clone()),
+            FruExpression::Literal { value } => Ok(value.clone()),
 
-            FruExpression::Variable(ident) => Ok(scope.get_variable(*ident)?),
+            FruExpression::Variable { ident } => Ok(scope.get_variable(*ident)?),
+
+            FruExpression::Function { args, body } => {
+                Ok(FruValue::Function(AnyFunction::Function(
+                    Rc::new(FruFunction {
+                        argument_idents: args.clone(),
+                        body: body.clone(),
+                        scope: scope.clone(),
+                    })
+                )))
+            }
 
             FruExpression::Block { body, expr } => {
                 if !body.is_empty() {
@@ -91,6 +105,20 @@ impl FruExpression {
                 Ok(callee.curry_call(args)?)
             }
 
+            FruExpression::Instantiation { what, args } => {
+                let instantiated = what.evaluate(scope.clone())?;
+
+                let args = eval_args(args, scope)?;
+
+                Ok(instantiated.instantiate(args)?)
+            }
+
+            FruExpression::FieldAccess { what, field } => {
+                let what = what.evaluate(scope.clone())?;
+
+                Ok(what.get_field(*field)?)
+            }
+
             FruExpression::Binary {
                 operator,
                 left,
@@ -110,45 +138,24 @@ impl FruExpression {
                 Ok(op.operate(left_val, right_val)?)
             }
 
-            FruExpression::Function { args, body } => Ok(FruValue::Function(
-                AnyFunction::Function(Rc::new(FruFunction {
-                    argument_idents: args.clone(),
-                    body: body.clone(),
-                    scope: scope.clone(),
-                })),
-            )),
-
-            FruExpression::Instantiation { what, args } => {
-                let instantiated = what.evaluate(scope.clone())?;
-
-                let args = eval_args(args, scope)?;
-
-                Ok(instantiated.instantiate(args)?)
-            }
-
-            FruExpression::FieldAccess { what, field } => {
-                let what = what.evaluate(scope.clone())?;
-                Ok(what.get_field(*field)?)
-            }
-
             FruExpression::If {
                 condition,
                 then_body,
                 else_body,
             } => {
-                let condition = condition.evaluate(scope.clone())?;
-
-                if let FruValue::Bool(b) = condition {
-                    if b {
-                        then_body.evaluate(scope.clone())
-                    } else {
-                        else_body.evaluate(scope.clone())
+                match condition.evaluate(scope.clone())? {
+                    FruValue::Bool(b) => {
+                        if b {
+                            then_body.evaluate(scope.clone())
+                        } else {
+                            else_body.evaluate(scope.clone())
+                        }
                     }
-                } else {
-                    FruError::new_val_control(format!(
+
+                    unexpected => FruError::new_val_control(format!(
                         "Expected boolean, got {}",
-                        condition.get_type_identifier()
-                    ))
+                        unexpected.get_type_identifier()
+                    )),
                 }
             }
         }

@@ -1,6 +1,5 @@
 use std::{
     boxed::Box,
-    collections::{BTreeSet, LinkedList},
     rc::Rc,
     str::Utf8Error,
 };
@@ -10,6 +9,7 @@ use thiserror::Error;
 use tree_sitter::{Node, Parser, Range};
 use tree_sitter_frugurt;
 
+use crate::helpers::WrappingExtension;
 use crate::interpreter::{
     expression::FruExpression,
     identifier::Identifier,
@@ -17,9 +17,7 @@ use crate::interpreter::{
     value::fru_type::FruField,
     value::fru_type::TypeType,
     value::fru_value::FruValue,
-    value::operator::calculate_precedence,
 };
-
 
 #[derive(Error, Debug)]
 pub enum ParseError {
@@ -84,6 +82,20 @@ trait NodeExtension {
     fn get_child(&self, name: &str) -> Result<Node, ParseError>;
 
     fn text<'a>(&self, source: &'a [u8]) -> Result<&'a str, ParseError>;
+
+    fn parse_statement(self, source: &[u8]) -> Result<FruStatement, ParseError>;
+
+    fn parse_expression(self, source: &[u8]) -> Result<FruExpression, ParseError>;
+
+    fn parse_function_body(self, source: &[u8]) -> Result<FruStatement, ParseError>;
+
+    fn parse_field(self, source: &[u8]) -> Result<AnyField, ParseError>;
+
+    fn parse_section(self, source: &[u8]) -> Result<TypeSection, ParseError>;
+
+    fn parse_method(self, source: &[u8]) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError>;
+
+    fn parse_watch(self, source: &[u8]) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError>;
 }
 
 impl NodeExtension for Node<'_> {
@@ -106,14 +118,81 @@ impl NodeExtension for Node<'_> {
             })
         }
     }
+
+    fn parse_statement(self, source: &[u8]) -> Result<FruStatement, ParseError> {
+        parse_statement(self, source)
+    }
+
+    fn parse_expression(self, source: &[u8]) -> Result<FruExpression, ParseError> {
+        parse_expression(self, source)
+    }
+
+    fn parse_function_body(self, source: &[u8]) -> Result<FruStatement, ParseError> {
+        parse_function_body(self, source)
+    }
+
+    fn parse_field(self, source: &[u8]) -> Result<AnyField, ParseError> {
+        parse_field(self, source)
+    }
+
+    fn parse_section(self, source: &[u8]) -> Result<TypeSection, ParseError> {
+        parse_section(self, source)
+    }
+
+    fn parse_method(self, source: &[u8]) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
+        parse_method(self, source)
+    }
+
+    fn parse_watch(self, source: &[u8]) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
+        parse_watch(self, source)
+    }
 }
+
+
+trait IntoIdentifierExtension {
+    fn to_ident(self) -> Identifier;
+}
+
+impl IntoIdentifierExtension for &str {
+    fn to_ident(self) -> Identifier {
+        Identifier::new(self)
+    }
+}
+
+trait OptionalParsingExtension {
+    fn parse_optional_statement(self, source: &[u8]) -> Result<Option<FruStatement>, ParseError>;
+
+    fn parse_optional_expression(self, source: &[u8]) -> Result<Option<FruExpression>, ParseError>;
+}
+
+impl OptionalParsingExtension for Result<Node<'_>, ParseError> {
+    fn parse_optional_statement(self, source: &[u8]) -> Result<Option<FruStatement>, ParseError> {
+        Ok(match self {
+            Ok(x) => Some(x.parse_statement(source)?),
+
+            Err(ParseError::MissingAst { .. }) => None,
+
+            Err(err) => return Err(err)
+        })
+    }
+    fn parse_optional_expression(self, source: &[u8]) -> Result<Option<FruExpression>, ParseError> {
+        Ok(match self {
+            Ok(x) => Some(x.parse_expression(source)?),
+
+            Err(ParseError::MissingAst { .. }) => None,
+
+            Err(err) => return Err(err)
+        })
+    }
+}
+
 
 pub fn parse(data: String) -> Result<Box<FruStatement>, ParseError> {
     let source = data.as_bytes();
 
     let mut parser = Parser::new();
 
-    parser // Todo: load grammar one time
+    parser // TODO: load grammar one time
         .set_language(&tree_sitter_frugurt::language())
         .expect("Error loading Frugurt grammar");
 
@@ -122,169 +201,91 @@ pub fn parse(data: String) -> Result<Box<FruStatement>, ParseError> {
     let root = tree.root_node();
 
     if root.has_error() {
-        search_for_errors(root)?;
+        return Err(search_for_errors(root));
     }
 
-    parse_statement(root, source).map(Box::new)
+    root.parse_statement(source).map(Box::new)
 }
 
-fn search_for_errors(ast: Node) -> Result<(), ParseError> {
+fn search_for_errors(ast: Node) -> ParseError {
     let mut cur = ast.walk();
 
     loop {
         if cur.node().is_error() {
-            return Err(ParseError::ParsingError {
+            return ParseError::ParsingError {
                 position: cur.node().range(),
-            });
+            };
         }
 
-        if cur.goto_first_child() {
+        if cur.node().has_error() {
+            cur.goto_first_child();
             continue;
-        }
-
-        if cur.goto_next_sibling() {
-            continue;
-        }
-
-        if cur.goto_parent() {
-            cur.goto_next_sibling();
         } else {
-            break;
+            cur.goto_next_sibling();
         }
     }
-
-    Ok(())
 }
-
-
-fn option_statement(x: Result<Node, ParseError>, source: &[u8]) -> Result<Option<FruStatement>, ParseError> {
-    Ok(match x {
-        Ok(x) => Some(parse_statement(x, source)?),
-        Err(_) => None,
-    })
-}
-
-fn option_expression(x: Result<Node, ParseError>, source: &[u8]) -> Result<Option<FruExpression>, ParseError> {
-    Ok(match x {
-        Ok(x) => Some(parse_expression(x, source)?),
-        Err(_) => None,
-    })
-}
-
 
 fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError> {
     let result_statement = match ast.grammar_name() {
-        "source_file" => FruStatement::Block(
-            ast.children_by_field_name("body", &mut ast.walk())
-               .map(|x| parse_statement(x, source))
-               .try_collect()?,
-        ),
+        "source_file" => FruStatement::Block {
+            body: ast.children_by_field_name("body", &mut ast.walk())
+                     .map(|x| x.parse_statement(source))
+                     .try_collect()?
+        },
 
-        "block_statement" => FruStatement::Block(
-            ast.children_by_field_name("body", &mut ast.walk())
-               .map(|x| parse_statement(x, source))
-               .try_collect()?,
-        ),
+        "block_statement" => FruStatement::Block {
+            body: ast.children_by_field_name("body", &mut ast.walk())
+                     .map(|x| x.parse_statement(source))
+                     .try_collect()?
+        },
 
         "expression_statement" => FruStatement::Expression {
-            value: Box::new(
-                parse_expression(
-                    ast.get_child("value")?,
-                    source,
-                )?
-            ),
+            value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
         },
 
         "let_statement" => FruStatement::Let {
-            ident: Identifier::new(
-                ast.get_child("ident")?
-                    .text(source)?,
-            ),
-            value: Box::new(
-                parse_expression(
-                    ast.get_child("value")?,
-                    source,
-                )?
-            ),
+            ident: ast.get_child("ident")?.text(source)?.to_ident(),
+            value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
         },
 
         "set_statement" => FruStatement::Set {
-            ident: Identifier::new(
-                ast.get_child("ident")
-                    ?
-                    .text(source)?,
-            ),
-            value: Box::new(
-                parse_expression(
-                    ast.get_child("value")?,
-                    source,
-                )?
-            ),
+            ident: ast.get_child("ident")?.text(source)?.to_ident(),
+            value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
         },
 
         "set_field_statement" => {
-            let what = parse_expression(
-                ast.get_child("what")?,
-                source,
-            )?;
+            match ast.get_child("what")?.parse_expression(source)? {
+                FruExpression::FieldAccess { what, field } => {
+                    FruStatement::SetField {
+                        what,
+                        field,
+                        value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
+                    }
+                }
 
-            let value = parse_expression(
-                ast.get_child("value")?,
-                source,
-            )?;
-
-            match what {
-                FruExpression::FieldAccess { what, field } => FruStatement::SetField {
-                    target: what,
-                    field,
-                    value: Box::new(value),
-                },
-
-                _ => panic!("set_field_statement: what is not a field access {:?}", what),
+                unexpected => return Err(ParseError::InvalidAst {
+                    position: ast.range(),
+                    error: format!("set_field_statement: what is not a field access {:?}", unexpected),
+                })
             }
         }
 
         "if_statement" => {
-            let condition = parse_expression(
-                ast.get_child("condition")?,
-                source,
-            )?;
-            let then_body = parse_statement(
-                ast.get_child("then_body")?,
-                source,
-            )?;
-            let else_body = option_statement(
-                ast.get_child("else_body"),
-                source,
-            )?;
-
             FruStatement::If {
-                condition: Box::new(condition),
-                then_body: Box::new(then_body),
-                else_body: else_body.map(Box::new),
+                condition: ast.get_child("condition")?.parse_expression(source)?.wrap_box(),
+                then_body: ast.get_child("then_body")?.parse_statement(source)?.wrap_box(),
+                else_body: ast.get_child("else_body").parse_optional_statement(source)?.map(Box::new),
             }
         }
 
         "while_statement" => FruStatement::While {
-            cond: Box::new(
-                parse_expression(
-                    ast.get_child("condition")?,
-                    source,
-                )?
-            ),
-            body: Box::new(
-                parse_statement(
-                    ast.get_child("body")?,
-                    source,
-                )?
-            ),
+            condition: ast.get_child("condition")?.parse_expression(source)?.wrap_box(),
+            body: ast.get_child("body")?.parse_statement(source)?.wrap_box(),
         },
 
         "return_statement" => FruStatement::Return {
-            value: option_expression(
-                ast.get_child("value"),
-                source,
-            )?.map(Box::new),
+            value: ast.get_child("value").parse_optional_expression(source)?.map(Box::new),
         },
 
         "break_statement" => FruStatement::Break,
@@ -292,39 +293,13 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
         "continue_statement" => FruStatement::Continue,
 
         "operator_statement" => FruStatement::Operator {
-            ident: Identifier::new(
-                ast.get_child("ident")
-                    ?
-                    .text(source)?,
-            ),
-
+            ident: ast.get_child("ident")?.text(source)?.to_ident(),
             commutative: ast.get_child("commutative").is_ok(),
-            left_ident: Identifier::new(
-                ast.get_child("left_ident")
-                    ?
-                    .text(source)?,
-            ),
-            left_type_ident: Identifier::new(
-                ast.get_child("left_type_ident")
-                    ?
-                    .text(source)?,
-            ),
-            right_ident: Identifier::new(
-                ast.get_child("right_ident")
-                    ?
-                    .text(source)?,
-            ),
-            right_type_ident: Identifier::new(
-                ast.get_child("right_type_ident")
-                    ?
-                    .text(source)?,
-            ),
-            body: Rc::new(
-                parse_function_body(
-                    ast.get_child("body")?,
-                    source,
-                )?
-            ),
+            left_ident: ast.get_child("left_ident")?.text(source)?.to_ident(),
+            left_type_ident: ast.get_child("left_type_ident")?.text(source)?.to_ident(),
+            right_ident: ast.get_child("right_ident")?.text(source)?.to_ident(),
+            right_type_ident: ast.get_child("right_type_ident")?.text(source)?.to_ident(),
+            body: ast.get_child("body")?.parse_function_body(source)?.wrap_rc(),
         },
 
         "type_statement" => {
@@ -339,14 +314,13 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
             }?;
 
 
-            let ident = Identifier::new(ast.get_child("ident")?.text(source)?);
+            let ident = ast.get_child("ident")?.text(source)?.to_ident();
 
             let mut fields = Vec::new();
             let mut static_fields = Vec::new();
 
-            for field in ast.children_by_field_name("fields", &mut ast.walk())
-                            .map(|x| parse_field(x, source)) {
-                match field? {
+            for field in ast.children_by_field_name("fields", &mut ast.walk()) {
+                match field.parse_field(source)? {
                     AnyField::Normal(f) => fields.push(f),
                     AnyField::Static(f) => static_fields.push(f),
                 }
@@ -357,7 +331,7 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
             let mut watches = Vec::new();
 
             for section in ast.children_by_field_name("sections", &mut ast.walk()) {
-                match parse_section(section, source)? {
+                match section.parse_section(source)? {
                     TypeSection::Impl(x) => methods.extend(x),
                     TypeSection::Static(x) => static_methods.extend(x),
                     TypeSection::Constraints(x) => watches.extend(x),
@@ -383,20 +357,24 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
 
 fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseError> {
     let result_expression = match ast.grammar_name() {
-        "nah_literal" => FruExpression::Literal(FruValue::Nah),
+        "nah_literal" => FruExpression::Literal { value: FruValue::Nah },
 
-        "number_literal" => FruExpression::Literal(FruValue::Number(
-            ast.text(source)?.parse().unwrap(),
-        )),
+        "number_literal" => FruExpression::Literal {
+            value: FruValue::Number(
+                ast.text(source)?.parse().unwrap(),
+            )
+        },
 
-        "bool_literal" => FruExpression::Literal(FruValue::Bool(
-            ast.text(source)?.parse().unwrap(),
-        )),
+        "bool_literal" => FruExpression::Literal {
+            value: FruValue::Bool(
+                ast.text(source)?.parse().unwrap(),
+            )
+        },
 
         "string_literal" => {
             let s = ast.text(source)?;
             match unescape(&s.replace("\\\n", "\n")) {
-                Ok(s) => FruExpression::Literal(FruValue::String(s)),
+                Ok(s) => FruExpression::Literal { value: FruValue::String(s) },
                 Err(e) => return Err(ParseError::InvalidAst {
                     position: ast.range(),
                     error: e.to_string(),
@@ -404,180 +382,62 @@ fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseErro
             }
         }
 
-        "variable" => FruExpression::Variable(Identifier::new(
-            ast.child(0).unwrap().text(source)?, // FIXME: unwrap
-        )),
-
-        "block_expression" => FruExpression::Block {
-            body: ast
-                .children_by_field_name("body", &mut ast.walk())
-                .map(|x| parse_statement(x, source))
-                .try_collect()?,
-            expr: Box::new(
-                parse_expression(
-                    ast.get_child("expr")?,
-                    source,
-                )?
-            ),
+        "variable" => FruExpression::Variable {
+            ident: ast.get_child("ident")?.text(source)?.to_ident()
         },
-
-        "call_expression" => FruExpression::Call {
-            what: Box::new(
-                parse_expression(
-                    ast.get_child("what")?,
-                    source,
-                )?
-            ),
-            args: ast.children_by_field_name("args", &mut ast.walk())
-                     .map(|x| parse_expression(x, source))
-                     .try_collect()?,
-        },
-
-        "curry_call_expression" => FruExpression::CurryCall {
-            what: Box::new(
-                parse_expression(
-                    ast.get_child("what")?,
-                    source,
-                )?
-            ),
-            args: ast.children_by_field_name("args", &mut ast.walk())
-                     .map(|x| parse_expression(x, source))
-                     .try_collect()?,
-        },
-
-        "binaries_expression" => {
-            enum Elem {
-                Expr(FruExpression),
-                BinOp { ident: Identifier, precedence: i32 },
-            }
-
-            let mut list = LinkedList::new();
-
-            let mut all_precedences = BTreeSet::new();
-
-            for (i, node) in ast.children_by_field_name("content", &mut ast.walk()).enumerate() {
-                if i % 2 == 0 {
-                    list.push_back(Elem::Expr(
-                        parse_expression(node, source)?
-                    ));
-                } else {
-                    let op = node.text(source)?;
-                    let precedence = calculate_precedence(op);
-
-                    all_precedences.insert(precedence);
-                    list.push_back(Elem::BinOp {
-                        ident: Identifier::new(op),
-                        precedence,
-                    });
-                }
-            }
-
-            for target_precedence in all_precedences {
-                let mut cursor = list.cursor_front_mut();
-                cursor.move_next();
-
-                loop {
-                    let ident = match cursor.current() {
-                        None => break,
-                        Some(Elem::BinOp { precedence, ident })
-                        if *precedence == target_precedence =>
-                            {
-                                *ident
-                            }
-                        _ => {
-                            cursor.move_next();
-                            continue;
-                        }
-                    };
-
-                    cursor.move_prev();
-
-                    let left = cursor.remove_current().unwrap();
-                    cursor.remove_current();
-                    let right = cursor.remove_current().unwrap();
-
-                    cursor.insert_before(Elem::Expr(FruExpression::Binary {
-                        operator: ident,
-                        left: Box::new(match left {
-                            Elem::Expr(expr) => expr,
-                            _ => panic!(),
-                        }),
-
-                        right: Box::new(match right {
-                            Elem::Expr(expr) => expr,
-                            _ => panic!(),
-                        }),
-                    }));
-                }
-            }
-
-            match list.pop_front().unwrap() {
-                Elem::Expr(expr) => expr,
-                _ => panic!(),
-            }
-        }
 
         "function_expression" => FruExpression::Function {
             args: ast
                 .children_by_field_name("args", &mut ast.walk())
                 .map(|x| x.text(source).map(Identifier::new))
                 .try_collect()?,
-            body: Rc::new(
-                parse_function_body(
-                    ast.get_child("body")?,
-                    source,
-                )?
-            ),
+            body: ast.get_child("body")?.parse_function_body(source)?.wrap_rc(),
+        },
+
+        "block_expression" => FruExpression::Block {
+            body: ast
+                .children_by_field_name("body", &mut ast.walk())
+                .map(|x| x.parse_statement(source))
+                .try_collect()?,
+            expr: ast.get_child("expr")?.parse_expression(source)?.wrap_box(),
+        },
+
+        "call_expression" => FruExpression::Call {
+            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
+            args: ast.children_by_field_name("args", &mut ast.walk())
+                     .map(|x| x.parse_expression(source))
+                     .try_collect()?,
+        },
+
+        "curry_call_expression" => FruExpression::CurryCall {
+            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
+            args: ast.children_by_field_name("args", &mut ast.walk())
+                     .map(|x| x.parse_expression(source))
+                     .try_collect()?,
         },
 
         "instantiation_expression" => FruExpression::Instantiation {
-            what: Box::new(
-                parse_expression(
-                    ast.get_child("what")?,
-                    source,
-                )?),
-            args: {
-                ast.children_by_field_name("args", &mut ast.walk())
-                   .map(|x| parse_expression(x, source))
-                   .try_collect()?
-            },
+            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
+            args: ast.children_by_field_name("args", &mut ast.walk())
+                     .map(|x| x.parse_expression(source))
+                     .try_collect()?,
         },
 
         "field_access_expression" => FruExpression::FieldAccess {
-            what: Box::new(
-                parse_expression(
-                    ast.get_child("what")?,
-                    source,
-                )?
-            ),
-            field: Identifier::new(
-                ast.get_child("field")
-                    ?
-                    .text(source)?,
-            ),
+            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
+            field: ast.get_child("field")?.text(source)?.to_ident(),
+        },
+
+        "binary_expression" => FruExpression::Binary {
+            operator: ast.get_child("operator")?.text(source)?.to_ident(),
+            left: ast.get_child("left")?.parse_expression(source)?.wrap_box(),
+            right: ast.get_child("right")?.parse_expression(source)?.wrap_box(),
         },
 
         "if_expression" => FruExpression::If {
-            condition: Box::new(
-                parse_expression(
-                    ast.get_child("condition")?,
-                    source,
-                )?
-            ),
-
-            then_body: Box::new(
-                parse_expression(
-                    ast.get_child("then_body")?,
-                    source,
-                )?
-            ),
-
-            else_body: Box::new(
-                parse_expression(
-                    ast.get_child("else_body")?,
-                    source,
-                )?
-            ),
+            condition: ast.get_child("condition")?.parse_expression(source)?.wrap_box(),
+            then_body: ast.get_child("then_body")?.parse_expression(source)?.wrap_box(),
+            else_body: ast.get_child("else_body")?.parse_expression(source)?.wrap_box(),
         },
 
         _ => unimplemented!(
@@ -592,9 +452,9 @@ fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseErro
 
 fn parse_function_body(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError> {
     Ok(match ast.grammar_name() {
-        "block_statement" => parse_statement(ast, source)?,
+        "block_statement" => ast.parse_statement(source)?,
         "block_expression" => FruStatement::Return {
-            value: Some(Box::new(parse_expression(ast, source)?)),
+            value: Some(ast.parse_expression(source)?.wrap_box()),
         },
         _ => unimplemented!("Not a function body: {}", ast.grammar_name()),
     })
@@ -603,13 +463,10 @@ fn parse_function_body(ast: Node, source: &[u8]) -> Result<FruStatement, ParseEr
 fn parse_field(ast: Node, source: &[u8]) -> Result<AnyField, ParseError> {
     let is_public = ast.get_child("pub").is_ok();
     let is_static = ast.get_child("static").is_ok();
-    let ident = Identifier::new(ast.get_child("ident")?
-        .text(source)?);
+    let ident = ast.get_child("ident")?.text(source)?.to_ident();
     let type_ident = ast.get_child("type_ident")
                         .ok().map(|x| x.text(source).map(Identifier::new)).transpose()?;
-    let value = option_expression(
-        ast.get_child("value"),
-        source)?;
+    let value = ast.get_child("value").parse_optional_expression(source)?;
 
     if !is_static && value.is_some() {
         let f = ast.get_child("value")?;
@@ -637,19 +494,22 @@ fn parse_section(ast: Node, source: &[u8]) -> Result<TypeSection, ParseError> {
         "type_impl_section" => {
             TypeSection::Impl(
                 ast.children_by_field_name("methods", &mut ast.walk())
-                   .map(|x| parse_method(x, source)).try_collect()?
+                   .map(|x| x.parse_method(source))
+                   .try_collect()?
             )
         }
         "type_static_section" => {
             TypeSection::Static(
                 ast.children_by_field_name("methods", &mut ast.walk())
-                   .map(|x| parse_method(x, source)).try_collect()?
+                   .map(|x| x.parse_method(source))
+                   .try_collect()?
             )
         }
         "type_constraints_section" => {
             TypeSection::Constraints(
                 ast.children_by_field_name("watches", &mut ast.walk())
-                   .map(|x| parse_watch(x, source)).try_collect()?
+                   .map(|x| x.parse_watch(source))
+                   .try_collect()?
             )
         }
 
@@ -658,18 +518,20 @@ fn parse_section(ast: Node, source: &[u8]) -> Result<TypeSection, ParseError> {
 }
 
 fn parse_method(ast: Node, source: &[u8]) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
-    let ident = Identifier::new(ast.get_child("ident")?.text(source)?);
+    let ident = ast.get_child("ident")?.text(source)?.to_ident();
     let args = ast.children_by_field_name("args", &mut ast.walk())
-                  .map(|x| x.text(source).map(Identifier::new)).try_collect()?;
-    let body = Rc::new(parse_function_body(ast.get_child("body")?, source)?);
+                  .map(|x| x.text(source).map(Identifier::new))
+                  .try_collect()?;
+    let body = ast.get_child("body")?.parse_function_body(source)?.wrap_rc();
     Ok((ident, args, body))
 }
 
 fn parse_watch(ast: Node, source: &[u8]) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
     let args = ast.children_by_field_name("args", &mut ast.walk())
-                  .map(|x| x.text(source).map(Identifier::new)).try_collect()?;
+                  .map(|x| x.text(source).map(Identifier::new))
+                  .try_collect()?;
 
-    let body = Rc::new(parse_statement(ast.get_child("body")?, source)?);
+    let body = ast.get_child("body")?.parse_statement(source)?.wrap_rc();
 
     Ok((args, body))
 }

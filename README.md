@@ -33,9 +33,9 @@ All types have fixed schema, that means:
 
 Also, there are three flavors of types:
 
-- struct - mutable, passed by value
-- class - mutable, passed by reference
-- data - immutable, passed by reference
+- `struct` - mutable, passed by value
+- `class` - mutable, passed by reference
+- `data` - immutable, passed by reference
 
 There is also builtin data validation, using "watches",
 see [docs](https://frugurt-lang.github.io/frugurt/03-object-oriented-programming/06-watches.html).

@@ -17,8 +17,9 @@ use crate::interpreter::{
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
-    Block(Vec<FruStatement>),
-    Nothing,
+    Block {
+        body: Vec<FruStatement>
+    },
     Expression {
         value: Box<FruExpression>,
     },
@@ -31,7 +32,7 @@ pub enum FruStatement {
         value: Box<FruExpression>,
     },
     SetField {
-        target: Box<FruExpression>,
+        what: Box<FruExpression>,
         field: Identifier,
         value: Box<FruExpression>,
     },
@@ -41,7 +42,7 @@ pub enum FruStatement {
         else_body: Option<Box<FruStatement>>,
     },
     While {
-        cond: Box<FruExpression>,
+        condition: Box<FruExpression>,
         body: Box<FruStatement>,
     },
     Return {
@@ -72,10 +73,10 @@ pub enum FruStatement {
 impl FruStatement {
     pub fn execute(&self, scope: Rc<Scope>) -> Control {
         match self {
-            FruStatement::Block(statements) => {
+            FruStatement::Block { body } => {
                 let new_scope = Scope::new_with_parent(scope.clone());
 
-                for statement in statements {
+                for statement in body {
                     match statement.execute(new_scope.clone()) {
                         Control::Nah => {}
 
@@ -86,10 +87,8 @@ impl FruStatement {
                 Control::Nah
             }
 
-            FruStatement::Nothing => Control::Nah,
-
-            FruStatement::Expression { value: expr } => {
-                expr.evaluate(scope.clone())?;
+            FruStatement::Expression { value } => {
+                value.evaluate(scope.clone())?;
                 Control::Nah
             }
 
@@ -106,22 +105,22 @@ impl FruStatement {
             }
 
             FruStatement::SetField {
-                target,
+                what,
                 field,
                 value,
             } => {
-                let t = target.evaluate(scope.clone())?;
+                let t = what.evaluate(scope.clone())?;
                 let v = value.evaluate(scope.clone())?;
                 t.set_field(*field, v.fru_clone())?;
                 Control::Nah
             }
 
             FruStatement::If {
-                condition: cond,
+                condition,
                 then_body,
                 else_body,
             } => {
-                let result = cond.evaluate(scope.clone())?;
+                let result = condition.evaluate(scope.clone())?;
 
                 if let FruValue::Bool(b) = result {
                     if b {
@@ -140,7 +139,7 @@ impl FruStatement {
             }
 
             FruStatement::While {
-                cond: condition,
+                condition,
                 body,
             } => {
                 while {
@@ -184,25 +183,25 @@ impl FruStatement {
             FruStatement::Operator {
                 ident,
                 commutative,
-                left_ident: left_arg,
-                left_type_ident: left_type,
-                right_ident: right_arg,
-                right_type_ident: right_type,
+                left_ident,
+                left_type_ident,
+                right_ident,
+                right_type_ident,
                 body,
             } => {
-                if *commutative && *left_type == *right_type {
+                if *commutative && *left_type_ident == *right_type_ident {
                     return FruError::new_control(format!(
                         "commutative operators must have different types, but {} was used twice",
-                        *left_type
+                        *left_type_ident
                     ));
                 }
 
                 if *commutative {
                     scope.set_operator(
-                        OperatorIdentifier::new(*ident, *right_type, *left_type),
+                        OperatorIdentifier::new(*ident, *right_type_ident, *left_type_ident),
                         AnyOperator::Operator {
-                            left_ident: *right_arg,
-                            right_ident: *left_arg,
+                            left_ident: *right_ident,
+                            right_ident: *left_ident,
                             body: body.clone(),
                             scope: scope.clone(),
                         }
@@ -211,10 +210,10 @@ impl FruStatement {
                 }
 
                 scope.set_operator(
-                    OperatorIdentifier::new(*ident, *left_type, *right_type),
+                    OperatorIdentifier::new(*ident, *left_type_ident, *right_type_ident),
                     AnyOperator::Operator {
-                        left_ident: *left_arg,
-                        right_ident: *right_arg,
+                        left_ident: *left_ident,
+                        right_ident: *right_ident,
                         body: body.clone(),
                         scope: scope.clone(),
                     },

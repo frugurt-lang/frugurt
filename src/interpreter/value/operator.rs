@@ -20,19 +20,6 @@ pub enum AnyOperator {
     BuiltinOperator(TOpBuiltin),
 }
 
-pub fn calculate_precedence(ident: &str) -> i32 {
-    match ident {
-        "=" => panic!("assignment is not an operator"),
-        "||" => 6,
-        "&&" => 5,
-        "<" | "<=" | ">" | ">=" | "==" | "!=" => 4,
-        "+" | "-" => 3,
-        "*" | "/" | "%" => 2,
-        "**" => 1,
-        _ => -1,
-    }
-}
-
 impl AnyOperator {
     pub fn operate(&self, left_val: FruValue, right_val: FruValue) -> Result<FruValue, FruError> {
         match self {
