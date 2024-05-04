@@ -13,9 +13,9 @@ window.highlighterInfo = {
 "static" @keyword
 "watch" @keyword
 "while" @keyword
-"-----constraints-----" @keyword
-"-----impl-----" @keyword
-"-----static-----" @keyword
+"constraints @keyword
+"impl @keyword
+
 
 (number_literal) @number
 (string_literal) @string

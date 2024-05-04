@@ -6,9 +6,7 @@ You can access fields and methods by name, there is no `this` or `self` keyword.
 struct Vector {
     x;
     y;
-
-    -----impl-----
-
+} impl {
     rotate90() {
         let old_x = x;
         x = -1 * y;

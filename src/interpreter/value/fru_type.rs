@@ -62,11 +62,11 @@ impl FruType {
         self.internal.fields.as_slice()
     }
 
-    pub fn get_watches_by_field(&self, ident: Identifier) -> Vec<FruWatch> {
+    pub fn get_watches_by_field(&self, ident: Identifier) -> &[FruWatch] {
         self.internal
             .watches_by_field
             .get(&ident)
-            .map_or_else(Vec::new, Vec::clone) // FIXME: clone overhead
+            .map_or_else(Default::default, Vec::as_slice)
     }
 
     pub fn get_scope(&self) -> Rc<Scope> {

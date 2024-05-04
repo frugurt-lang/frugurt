@@ -6,9 +6,7 @@ fn test_box() {
             struct Box {
                 pub fe : Number;
                 static val = 5;
-                
-                -----constraints-----
-                
+            } constraints {
                 watch(fe) {
                     val = fe;
                     print(val);
@@ -33,9 +31,7 @@ fn test_vector() {
                 x;
                 y;
                 static m = 10;
-                
-                -----impl-----
-                
+            } impl {
                 swap() {
                     let tmp = x;
                     x = y;
@@ -47,9 +43,9 @@ fn test_vector() {
                     y = y * m;
                 }
                 
-                -----static-----
-                
-                new45(x) {Vec2:{x, x}}
+                static new45(x) {
+                    Vec2:{x, x}
+                }
             }
             
             let v = Vec2 :{ 1, 2 };
