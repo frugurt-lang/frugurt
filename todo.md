@@ -26,6 +26,7 @@
 - implement Display for FruValue and fix for FruObject
 - remove or fix BACKWARDS_MAP in Identifier (fails testing with some probability)
 - introduce a new error type for "method/field not found"
+- automate wasm module for book
 
 # Possible improvements
 
