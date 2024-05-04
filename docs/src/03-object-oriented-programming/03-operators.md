@@ -37,3 +37,16 @@ a += b;
 
 print(a); // Vector{x=4, y=6}
 ```
+
+Operator precedences from highest to lowest:
+
+- Custom operators have the highest precedence
+- `**` `<>`
+- `*` `/` `%`
+- `+` `-`
+- `<` `>` `<=` `>=`
+- `==` `!=`
+- `&&`
+- `||` - the lowest precedence
+
+All operators have left associativity

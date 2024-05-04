@@ -21,7 +21,7 @@ use crate::interpreter::{
 
 #[derive(Error, Debug)]
 pub enum ParseError {
-    // in theory could never happen
+    // needed ast is not provided by tree-sitter-frugurt (in theory could never happen)
     #[error("node {} is not provided by tree-sitter-frugurt at {}:{}-{}:{}",
     name,
     .position.start_point.row + 1,
@@ -33,7 +33,7 @@ pub enum ParseError {
         name: String,
     },
 
-    // in theory could never happen
+    // ast provided by tree-sitter-frugurt is invalid (in theory could never happen)
     #[error("{} at {}:{}-{}:{}",
     .error,
     .position.start_point.row + 1,
@@ -65,6 +65,18 @@ pub enum ParseError {
     ParsingError {
         position: Range,
     },
+
+    // invalid ast combination, that can only be caught by this parser
+    #[error("{} at {}:{}-{}:{}",
+    .error,
+    .position.start_point.row + 1,
+    .position.start_point.column,
+    .position.end_point.row + 1,
+    .position.end_point.column)]
+    Error {
+        position: Range,
+        error: String,
+    },
 }
 
 enum TypeSection {
@@ -78,114 +90,84 @@ enum AnyField {
     Static((FruField, Option<Box<FruExpression>>)),
 }
 
-trait NodeExtension {
-    fn get_child(&self, name: &str) -> Result<Node, ParseError>;
-
-    fn text<'a>(&self, source: &'a [u8]) -> Result<&'a str, ParseError>;
-
-    fn parse_statement(self, source: &[u8]) -> Result<FruStatement, ParseError>;
-
-    fn parse_expression(self, source: &[u8]) -> Result<FruExpression, ParseError>;
-
-    fn parse_function_body(self, source: &[u8]) -> Result<FruStatement, ParseError>;
-
-    fn parse_field(self, source: &[u8]) -> Result<AnyField, ParseError>;
-
-    fn parse_section(self, source: &[u8]) -> Result<TypeSection, ParseError>;
-
-    fn parse_method(self, source: &[u8]) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError>;
-
-    fn parse_watch(self, source: &[u8]) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError>;
+#[derive(Clone, Copy)]
+struct NodeWrapper<'a> {
+    node: Node<'a>,
+    source: &'a [u8],
 }
 
-impl NodeExtension for Node<'_> {
-    fn get_child(&self, name: &str) -> Result<Node, ParseError> {
-        match self.child_by_field_name(name) {
-            Some(x) => Ok(x),
+impl<'a> NodeWrapper<'a> {
+    pub fn new(node: Node<'a>, source: &'a [u8]) -> Self {
+        Self { node, source }
+    }
+
+    pub fn grammar_name(&self) -> &str {
+        self.node.grammar_name()
+    }
+
+    pub fn range(&self) -> Range {
+        self.node.range()
+    }
+
+    pub fn text(&self) -> Result<&'a str, ParseError> {
+        self.node.utf8_text(self.source).map_err(
+            |x| ParseError::Utf8Error {
+                position: self.node.range(),
+                error: x,
+            })
+    }
+
+    pub fn ident(self) -> Result<Identifier, ParseError> {
+        self.text().map(Identifier::new)
+    }
+
+    pub fn get_child(&self, name: &str) -> Result<Self, ParseError> {
+        match self.node.child_by_field_name(name) {
+            Some(x) => Ok(Self::new(x, self.source)),
+
             None => Err(ParseError::MissingAst {
-                position: self.range(),
+                position: self.node.range(),
                 name: name.to_string(),
-            })
+            }),
         }
     }
 
-    fn text<'a>(&self, source: &'a [u8]) -> Result<&'a str, ParseError> {
-        match self.utf8_text(source) {
-            Ok(x) => Ok(x),
-            Err(e) => Err(ParseError::Utf8Error {
-                position: self.range(),
-                error: e,
-            })
+    pub fn get_child_text(&self, name: &str) -> Result<&str, ParseError> {
+        self.get_child(name)?.text()
+    }
+
+    pub fn get_child_ident(self, name: &str) -> Result<Identifier, ParseError> {
+        Ok(Identifier::new(self.get_child_text(name)?))
+    }
+
+    pub fn parse_child_statement(self, name: &str) -> Result<FruStatement, ParseError> {
+        parse_statement(self.get_child(name)?)
+    }
+
+    pub fn parse_child_expression(self, name: &str) -> Result<FruExpression, ParseError> {
+        parse_expression(self.get_child(name)?)
+    }
+
+    pub fn parse_child<T>(&self, name: &str, parser: impl Fn(Self) -> Result<T, ParseError>)
+                          -> Result<T, ParseError> {
+        parser(self.get_child(name)?)
+    }
+
+    pub fn parse_children<T>(self, name: &str, parser: impl Fn(Self) -> Result<T, ParseError>)
+                             -> Result<Vec<T>, ParseError> {
+        self.node.children_by_field_name(name, &mut self.node.walk())
+            .map(|x| parser(Self::new(x, self.source)))
+            .try_collect()
+    }
+
+    pub fn parse_optional_child<T>(self, name: &str, parser: impl Fn(Self) -> Result<T, ParseError>)
+                                   -> Result<Option<T>, ParseError> {
+        match self.node.child_by_field_name(name) {
+            Some(x) => Ok(Some(parser(Self::new(x, self.source))?)),
+            None => Ok(None),
         }
     }
-
-    fn parse_statement(self, source: &[u8]) -> Result<FruStatement, ParseError> {
-        parse_statement(self, source)
-    }
-
-    fn parse_expression(self, source: &[u8]) -> Result<FruExpression, ParseError> {
-        parse_expression(self, source)
-    }
-
-    fn parse_function_body(self, source: &[u8]) -> Result<FruStatement, ParseError> {
-        parse_function_body(self, source)
-    }
-
-    fn parse_field(self, source: &[u8]) -> Result<AnyField, ParseError> {
-        parse_field(self, source)
-    }
-
-    fn parse_section(self, source: &[u8]) -> Result<TypeSection, ParseError> {
-        parse_section(self, source)
-    }
-
-    fn parse_method(self, source: &[u8]) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
-        parse_method(self, source)
-    }
-
-    fn parse_watch(self, source: &[u8]) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
-        parse_watch(self, source)
-    }
 }
-
-
-trait IntoIdentifierExtension {
-    fn to_ident(self) -> Identifier;
-}
-
-impl IntoIdentifierExtension for &str {
-    fn to_ident(self) -> Identifier {
-        Identifier::new(self)
-    }
-}
-
-trait OptionalParsingExtension {
-    fn parse_optional_statement(self, source: &[u8]) -> Result<Option<FruStatement>, ParseError>;
-
-    fn parse_optional_expression(self, source: &[u8]) -> Result<Option<FruExpression>, ParseError>;
-}
-
-impl OptionalParsingExtension for Result<Node<'_>, ParseError> {
-    fn parse_optional_statement(self, source: &[u8]) -> Result<Option<FruStatement>, ParseError> {
-        Ok(match self {
-            Ok(x) => Some(x.parse_statement(source)?),
-
-            Err(ParseError::MissingAst { .. }) => None,
-
-            Err(err) => return Err(err)
-        })
-    }
-    fn parse_optional_expression(self, source: &[u8]) -> Result<Option<FruExpression>, ParseError> {
-        Ok(match self {
-            Ok(x) => Some(x.parse_expression(source)?),
-
-            Err(ParseError::MissingAst { .. }) => None,
-
-            Err(err) => return Err(err)
-        })
-    }
-}
-
 
 pub fn parse(data: String) -> Result<Box<FruStatement>, ParseError> {
     let source = data.as_bytes();
@@ -204,7 +186,7 @@ pub fn parse(data: String) -> Result<Box<FruStatement>, ParseError> {
         return Err(search_for_errors(root));
     }
 
-    root.parse_statement(source).map(Box::new)
+    parse_statement(NodeWrapper::new(root, source)).map(Box::new)
 }
 
 fn search_for_errors(ast: Node) -> ParseError {
@@ -226,66 +208,53 @@ fn search_for_errors(ast: Node) -> ParseError {
     }
 }
 
-fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError> {
+fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
     let result_statement = match ast.grammar_name() {
         "source_file" => FruStatement::Block {
-            body: ast.children_by_field_name("body", &mut ast.walk())
-                     .map(|x| x.parse_statement(source))
-                     .try_collect()?
+            body: ast.parse_children("body", parse_statement)?
         },
 
         "block_statement" => FruStatement::Block {
-            body: ast.children_by_field_name("body", &mut ast.walk())
-                     .map(|x| x.parse_statement(source))
-                     .try_collect()?
+            body: ast.parse_children("body", parse_statement)?
         },
 
         "expression_statement" => FruStatement::Expression {
-            value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
+            value: ast.parse_child_expression("value")?.wrap_box(),
         },
 
         "let_statement" => FruStatement::Let {
-            ident: ast.get_child("ident")?.text(source)?.to_ident(),
-            value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
+            ident: ast.get_child_ident("ident")?,
+            value: ast.parse_child_expression("value")?.wrap_box(),
         },
 
         "set_statement" => FruStatement::Set {
-            ident: ast.get_child("ident")?.text(source)?.to_ident(),
-            value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
+            ident: ast.get_child_ident("ident")?,
+            value: ast.parse_child_expression("value")?.wrap_box(),
         },
 
         "set_field_statement" => {
-            match ast.get_child("what")?.parse_expression(source)? {
-                FruExpression::FieldAccess { what, field } => {
-                    FruStatement::SetField {
-                        what,
-                        field,
-                        value: ast.get_child("value")?.parse_expression(source)?.wrap_box(),
-                    }
-                }
-
-                unexpected => return Err(ParseError::InvalidAst {
-                    position: ast.range(),
-                    error: format!("set_field_statement: what is not a field access {:?}", unexpected),
-                })
+            FruStatement::SetField {
+                what: ast.parse_child_expression("what")?.wrap_box(),
+                field: ast.get_child_ident("field")?,
+                value: ast.parse_child_expression("value")?.wrap_box(),
             }
         }
 
         "if_statement" => {
             FruStatement::If {
-                condition: ast.get_child("condition")?.parse_expression(source)?.wrap_box(),
-                then_body: ast.get_child("then_body")?.parse_statement(source)?.wrap_box(),
-                else_body: ast.get_child("else_body").parse_optional_statement(source)?.map(Box::new),
+                condition: ast.parse_child_expression("condition")?.wrap_box(),
+                then_body: ast.parse_child_statement("then_body")?.wrap_box(),
+                else_body: ast.parse_optional_child("else_body", parse_statement)?.map(Box::new),
             }
         }
 
         "while_statement" => FruStatement::While {
-            condition: ast.get_child("condition")?.parse_expression(source)?.wrap_box(),
-            body: ast.get_child("body")?.parse_statement(source)?.wrap_box(),
+            condition: ast.parse_child_expression("condition")?.wrap_box(),
+            body: ast.parse_child_statement("body")?.wrap_box(),
         },
 
         "return_statement" => FruStatement::Return {
-            value: ast.get_child("value").parse_optional_expression(source)?.map(Box::new),
+            value: ast.parse_optional_child("value", parse_expression)?.map(Box::new),
         },
 
         "break_statement" => FruStatement::Break,
@@ -293,34 +262,33 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
         "continue_statement" => FruStatement::Continue,
 
         "operator_statement" => FruStatement::Operator {
-            ident: ast.get_child("ident")?.text(source)?.to_ident(),
+            ident: ast.get_child_ident("ident")?,
             commutative: ast.get_child("commutative").is_ok(),
-            left_ident: ast.get_child("left_ident")?.text(source)?.to_ident(),
-            left_type_ident: ast.get_child("left_type_ident")?.text(source)?.to_ident(),
-            right_ident: ast.get_child("right_ident")?.text(source)?.to_ident(),
-            right_type_ident: ast.get_child("right_type_ident")?.text(source)?.to_ident(),
-            body: ast.get_child("body")?.parse_function_body(source)?.wrap_rc(),
+            left_ident: ast.get_child_ident("left_ident")?,
+            left_type_ident: ast.get_child_ident("left_type_ident")?,
+            right_ident: ast.get_child_ident("right_ident")?,
+            right_type_ident: ast.get_child_ident("right_type_ident")?,
+            body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
         },
 
         "type_statement" => {
-            let type_type = match ast.get_child("type_type")?.text(source)? {
-                "struct" => Ok(TypeType::Struct),
-                "class" => Ok(TypeType::Class),
-                "data" => Ok(TypeType::Data),
-                _ => Err(ParseError::InvalidAst {
+            let type_type = match ast.get_child_text("type_type")? {
+                "struct" => TypeType::Struct,
+                "class" => TypeType::Class,
+                "data" => TypeType::Data,
+                _ => return Err(ParseError::InvalidAst {
                     position: ast.get_child("type_type")?.range(),
-                    error: format!("Invalid type type: {}", ast.get_child("type_type")?.text(source)?),
+                    error: format!("Invalid type type: {}", ast.get_child_text("type_type")?),
                 }),
-            }?;
+            };
 
-
-            let ident = ast.get_child("ident")?.text(source)?.to_ident();
+            let ident = ast.get_child_ident("ident")?;
 
             let mut fields = Vec::new();
             let mut static_fields = Vec::new();
 
-            for field in ast.children_by_field_name("fields", &mut ast.walk()) {
-                match field.parse_field(source)? {
+            for field in ast.parse_children("fields", parse_field)? {
+                match field {
                     AnyField::Normal(f) => fields.push(f),
                     AnyField::Static(f) => static_fields.push(f),
                 }
@@ -330,8 +298,8 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
             let mut static_methods = Vec::new();
             let mut watches = Vec::new();
 
-            for section in ast.children_by_field_name("sections", &mut ast.walk()) {
-                match section.parse_section(source)? {
+            for section in ast.parse_children("sections", parse_section)? {
+                match section {
                     TypeSection::Impl(x) => methods.extend(x),
                     TypeSection::Static(x) => static_methods.extend(x),
                     TypeSection::Constraints(x) => watches.extend(x),
@@ -349,32 +317,39 @@ fn parse_statement(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError>
             }
         }
 
-        x => unimplemented!("Not a statement: {} {}", x, ast.text(source)?),
+        unexpected => return Err(ParseError::InvalidAst {
+            position: ast.range(),
+            error: format!("Not a statement: {}", unexpected),
+        })
     };
 
     Ok(result_statement)
 }
 
-fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseError> {
+fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
     let result_expression = match ast.grammar_name() {
-        "nah_literal" => FruExpression::Literal { value: FruValue::Nah },
+        "nah_literal" => FruExpression::Literal {
+            value: FruValue::Nah
+        },
 
         "number_literal" => FruExpression::Literal {
             value: FruValue::Number(
-                ast.text(source)?.parse().unwrap(),
+                ast.text()?.parse().unwrap(),
             )
         },
 
         "bool_literal" => FruExpression::Literal {
             value: FruValue::Bool(
-                ast.text(source)?.parse().unwrap(),
+                ast.text()?.parse().unwrap(),
             )
         },
 
         "string_literal" => {
-            let s = ast.text(source)?;
-            match unescape(&s.replace("\\\n", "\n")) {
-                Ok(s) => FruExpression::Literal { value: FruValue::String(s) },
+            match unescape(&ast.text()?.replace("\\\n", "\n")) {
+                Ok(s) => FruExpression::Literal {
+                    value: FruValue::String(s)
+                },
+
                 Err(e) => return Err(ParseError::InvalidAst {
                     position: ast.range(),
                     error: e.to_string(),
@@ -383,97 +358,87 @@ fn parse_expression(ast: Node, source: &[u8]) -> Result<FruExpression, ParseErro
         }
 
         "variable" => FruExpression::Variable {
-            ident: ast.get_child("ident")?.text(source)?.to_ident()
+            ident: ast.get_child_ident("ident")?
         },
 
         "function_expression" => FruExpression::Function {
-            args: ast
-                .children_by_field_name("args", &mut ast.walk())
-                .map(|x| x.text(source).map(Identifier::new))
-                .try_collect()?,
-            body: ast.get_child("body")?.parse_function_body(source)?.wrap_rc(),
+            args: ast.parse_children("args", NodeWrapper::ident)?,
+            body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
         },
 
         "block_expression" => FruExpression::Block {
-            body: ast
-                .children_by_field_name("body", &mut ast.walk())
-                .map(|x| x.parse_statement(source))
-                .try_collect()?,
-            expr: ast.get_child("expr")?.parse_expression(source)?.wrap_box(),
+            body: ast.parse_children("body", parse_statement)?,
+            expr: ast.parse_child_expression("expr")?.wrap_box(),
         },
 
         "call_expression" => FruExpression::Call {
-            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
-            args: ast.children_by_field_name("args", &mut ast.walk())
-                     .map(|x| x.parse_expression(source))
-                     .try_collect()?,
+            what: ast.parse_child_expression("what")?.wrap_box(),
+            args: ast.parse_children("args", parse_expression)?,
         },
 
         "curry_call_expression" => FruExpression::CurryCall {
-            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
-            args: ast.children_by_field_name("args", &mut ast.walk())
-                     .map(|x| x.parse_expression(source))
-                     .try_collect()?,
+            what: ast.parse_child_expression("what")?.wrap_box(),
+            args: ast.parse_children("args", parse_expression)?,
         },
 
         "instantiation_expression" => FruExpression::Instantiation {
-            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
-            args: ast.children_by_field_name("args", &mut ast.walk())
-                     .map(|x| x.parse_expression(source))
-                     .try_collect()?,
+            what: ast.parse_child_expression("what")?.wrap_box(),
+            args: ast.parse_children("args", parse_expression)?,
         },
 
         "field_access_expression" => FruExpression::FieldAccess {
-            what: ast.get_child("what")?.parse_expression(source)?.wrap_box(),
-            field: ast.get_child("field")?.text(source)?.to_ident(),
+            what: ast.parse_child_expression("what")?.wrap_box(),
+            field: ast.get_child_ident("field")?,
         },
 
         "binary_expression" => FruExpression::Binary {
-            operator: ast.get_child("operator")?.text(source)?.to_ident(),
-            left: ast.get_child("left")?.parse_expression(source)?.wrap_box(),
-            right: ast.get_child("right")?.parse_expression(source)?.wrap_box(),
+            operator: ast.get_child_ident("operator")?,
+            left: ast.parse_child_expression("left")?.wrap_box(),
+            right: ast.parse_child_expression("right")?.wrap_box(),
         },
 
         "if_expression" => FruExpression::If {
-            condition: ast.get_child("condition")?.parse_expression(source)?.wrap_box(),
-            then_body: ast.get_child("then_body")?.parse_expression(source)?.wrap_box(),
-            else_body: ast.get_child("else_body")?.parse_expression(source)?.wrap_box(),
+            condition: ast.parse_child_expression("condition")?.wrap_box(),
+            then_body: ast.parse_child_expression("then_body")?.wrap_box(),
+            else_body: ast.parse_child_expression("else_body")?.wrap_box(),
         },
 
-        _ => unimplemented!(
-            "Not an expression: {} {}",
-            ast.grammar_name(),
-            ast.text(source)?
-        ),
+        unexpected => return Err(ParseError::InvalidAst {
+            position: ast.range(),
+            error: format!("Not an expression: {}", unexpected),
+        })
     };
 
     Ok(result_expression)
 }
 
-fn parse_function_body(ast: Node, source: &[u8]) -> Result<FruStatement, ParseError> {
+fn parse_function_body(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
     Ok(match ast.grammar_name() {
-        "block_statement" => ast.parse_statement(source)?,
+        "block_statement" => parse_statement(ast)?,
         "block_expression" => FruStatement::Return {
-            value: Some(ast.parse_expression(source)?.wrap_box()),
+            value: Some(parse_expression(ast)?.wrap_box()),
         },
-        _ => unimplemented!("Not a function body: {}", ast.grammar_name()),
+
+        unexpected => return Err(ParseError::InvalidAst {
+            position: ast.range(),
+            error: format!("Not a function body: {}", unexpected),
+        })
     })
 }
 
-fn parse_field(ast: Node, source: &[u8]) -> Result<AnyField, ParseError> {
+fn parse_field(ast: NodeWrapper) -> Result<AnyField, ParseError> {
     let is_public = ast.get_child("pub").is_ok();
     let is_static = ast.get_child("static").is_ok();
-    let ident = ast.get_child("ident")?.text(source)?.to_ident();
-    let type_ident = ast.get_child("type_ident")
-                        .ok().map(|x| x.text(source).map(Identifier::new)).transpose()?;
-    let value = ast.get_child("value").parse_optional_expression(source)?;
+    let ident = ast.get_child_ident("ident")?;
+    let type_ident = ast.parse_optional_child("type_ident", NodeWrapper::ident)?;
+
+    let value = ast.parse_optional_child("value", parse_expression)?;
 
     if !is_static && value.is_some() {
-        let f = ast.get_child("value")?;
-        panic!("Non-static field {} at {}-{} cannot have an default value", ident,
-               f.start_position(),
-               f.end_position(),
-        );
+        return Err(ParseError::Error {
+            position: ast.get_child("value")?.range(),
+            error: "Non-static field cannot have an initial value".to_string(),
+        });
     }
 
     let res = FruField {
@@ -489,49 +454,45 @@ fn parse_field(ast: Node, source: &[u8]) -> Result<AnyField, ParseError> {
     })
 }
 
-fn parse_section(ast: Node, source: &[u8]) -> Result<TypeSection, ParseError> {
+fn parse_section(ast: NodeWrapper) -> Result<TypeSection, ParseError> {
     Ok(match ast.grammar_name() {
         "type_impl_section" => {
             TypeSection::Impl(
-                ast.children_by_field_name("methods", &mut ast.walk())
-                   .map(|x| x.parse_method(source))
-                   .try_collect()?
+                ast.parse_children("methods", parse_method)?
             )
         }
         "type_static_section" => {
             TypeSection::Static(
-                ast.children_by_field_name("methods", &mut ast.walk())
-                   .map(|x| x.parse_method(source))
-                   .try_collect()?
+                ast.parse_children("methods", parse_method)?
             )
         }
         "type_constraints_section" => {
             TypeSection::Constraints(
-                ast.children_by_field_name("watches", &mut ast.walk())
-                   .map(|x| x.parse_watch(source))
-                   .try_collect()?
+                ast.parse_children("watches", parse_watch)?
             )
         }
 
-        _ => unimplemented!("Not a section: {}", ast.grammar_name()),
+        unexpected => return Err(ParseError::InvalidAst {
+            position: ast.range(),
+            error: format!("Not a type section: {}", unexpected),
+        })
     })
 }
 
-fn parse_method(ast: Node, source: &[u8]) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
-    let ident = ast.get_child("ident")?.text(source)?.to_ident();
-    let args = ast.children_by_field_name("args", &mut ast.walk())
-                  .map(|x| x.text(source).map(Identifier::new))
-                  .try_collect()?;
-    let body = ast.get_child("body")?.parse_function_body(source)?.wrap_rc();
+fn parse_method(ast: NodeWrapper) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
+    let ident = ast.get_child_ident("ident")?;
+
+    let args = ast.parse_children("args", NodeWrapper::ident)?;
+
+    let body = ast.parse_child("body", parse_function_body)?.wrap_rc();
+
     Ok((ident, args, body))
 }
 
-fn parse_watch(ast: Node, source: &[u8]) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
-    let args = ast.children_by_field_name("args", &mut ast.walk())
-                  .map(|x| x.text(source).map(Identifier::new))
-                  .try_collect()?;
+fn parse_watch(ast: NodeWrapper) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
+    let args = ast.parse_children("args", NodeWrapper::ident)?;
 
-    let body = ast.get_child("body")?.parse_statement(source)?.wrap_rc();
+    let body = ast.parse_child_statement("body")?.wrap_rc();
 
     Ok((args, body))
 }
