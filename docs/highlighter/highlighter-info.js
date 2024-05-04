@@ -13,14 +13,14 @@ window.highlighterInfo = {
 "static" @keyword
 "watch" @keyword
 "while" @keyword
-"constraints @keyword
-"impl @keyword
+"constraints" @keyword
+"impl" @keyword
 
 
 (number_literal) @number
 (string_literal) @string
 (bool_literal) @bool
-
+(comment) @comment
 
 (let_statement
     ident: (identifier) @function.declaration
@@ -36,5 +36,6 @@ window.highlighterInfo = {
         "number":               "#2AACB8",
         "string":               "#6AAB73",
         "bool":                 "#CF8E6D",
+        "comment":              "#7A7E85",
     },
 };
