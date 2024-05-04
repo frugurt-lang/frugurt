@@ -7,14 +7,12 @@ struct Vector {
     x;
     y;
     static scaler = 10;
-
-    -----static-----
-
-    scale(v) {
+} impl {
+    static scale(v) {
         Vector :{ v.x * scaler, v.y * scaler}
     }
 
-    double_scaler() {
+    static double_scaler() {
         scaler = scaler * 2;
     }
 }

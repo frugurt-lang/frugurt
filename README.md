@@ -44,23 +44,17 @@ see [docs](https://frugurt-lang.github.io/frugurt/03-object-oriented-programming
 struct Vector {
     x;
     y;
-
-    -----static-----
-
-    new(x, y) {
+} impl {
+    static new(x, y) {
         return Vector:{ x, y };
     }
-
-    -----impl-----
 
     add(other) {
         // fields are accessible like in complied languages
         // there are static fields too (see docs)
         Vector:{x + other.x, y + other.y }
     }
-
-    -----constraints-----
-
+} constraints {
     watch (x) {
         if x < -1000 {
             x = -1000;
@@ -90,10 +84,6 @@ let v2 = Vector.new(3, 4);
 let v3 = v1 <+> v2;
 
 print(v3); // Vector{x=4, y=6}
-
 ```
-
-> `-----some_name-----` are keywords, you can find more about them in docs.
-
 
 [See docs for more details](https://leokostarev.github.io/frugurt-lang/)

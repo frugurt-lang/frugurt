@@ -79,9 +79,8 @@ pub enum ParseError {
     },
 }
 
-enum TypeSection {
-    Impl(Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>),
-    Static(Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>),
+enum TypeExtension {
+    Impl(Vec<(bool, Identifier, Vec<Identifier>, Rc<FruStatement>)>),
     Constraints(Vec<(Vec<Identifier>, Rc<FruStatement>)>),
 }
 
@@ -298,11 +297,18 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             let mut static_methods = Vec::new();
             let mut watches = Vec::new();
 
-            for section in ast.parse_children("sections", parse_section)? {
-                match section {
-                    TypeSection::Impl(x) => methods.extend(x),
-                    TypeSection::Static(x) => static_methods.extend(x),
-                    TypeSection::Constraints(x) => watches.extend(x),
+            for extension in ast.parse_children("extensions", parse_extension)? {
+                match extension {
+                    TypeExtension::Impl(xs) => {
+                        for x in xs {
+                            if x.0 {
+                                static_methods.push((x.1, x.2, x.3));
+                            } else {
+                                methods.push((x.1, x.2, x.3));
+                            }
+                        }
+                    }
+                    TypeExtension::Constraints(x) => watches.extend(x),
                 }
             }
 
@@ -362,7 +368,7 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
         },
 
         "function_expression" => FruExpression::Function {
-            args: ast.parse_children("args", NodeWrapper::ident)?,
+            args: ast.parse_child("parameters", parse_formal_parameters)?,
             body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
         },
 
@@ -373,17 +379,17 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
 
         "call_expression" => FruExpression::Call {
             what: ast.parse_child_expression("what")?.wrap_box(),
-            args: ast.parse_children("args", parse_expression)?,
+            args: ast.parse_child("args", parse_argument_list)?,
         },
 
         "curry_call_expression" => FruExpression::CurryCall {
             what: ast.parse_child_expression("what")?.wrap_box(),
-            args: ast.parse_children("args", parse_expression)?,
+            args: ast.parse_child("args", parse_argument_list)?,
         },
 
         "instantiation_expression" => FruExpression::Instantiation {
             what: ast.parse_child_expression("what")?.wrap_box(),
-            args: ast.parse_children("args", parse_expression)?,
+            args: ast.parse_child("args", parse_argument_list)?,
         },
 
         "field_access_expression" => FruExpression::FieldAccess {
@@ -454,39 +460,36 @@ fn parse_field(ast: NodeWrapper) -> Result<AnyField, ParseError> {
     })
 }
 
-fn parse_section(ast: NodeWrapper) -> Result<TypeSection, ParseError> {
+fn parse_extension(ast: NodeWrapper) -> Result<TypeExtension, ParseError> {
     Ok(match ast.grammar_name() {
-        "type_impl_section" => {
-            TypeSection::Impl(
+        "type_impl_extension" => {
+            TypeExtension::Impl(
                 ast.parse_children("methods", parse_method)?
             )
         }
-        "type_static_section" => {
-            TypeSection::Static(
-                ast.parse_children("methods", parse_method)?
-            )
-        }
-        "type_constraints_section" => {
-            TypeSection::Constraints(
+        "type_constraints_extension" => {
+            TypeExtension::Constraints(
                 ast.parse_children("watches", parse_watch)?
             )
         }
 
         unexpected => return Err(ParseError::InvalidAst {
             position: ast.range(),
-            error: format!("Not a type section: {}", unexpected),
+            error: format!("Not a type extension: {}", unexpected),
         })
     })
 }
 
-fn parse_method(ast: NodeWrapper) -> Result<(Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
+fn parse_method(ast: NodeWrapper) -> Result<(bool, Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
+    let is_static = ast.get_child("static").is_ok();
+
     let ident = ast.get_child_ident("ident")?;
 
-    let args = ast.parse_children("args", NodeWrapper::ident)?;
+    let args = ast.parse_child("parameters", parse_formal_parameters)?;
 
     let body = ast.parse_child("body", parse_function_body)?.wrap_rc();
 
-    Ok((ident, args, body))
+    Ok((is_static, ident, args, body))
 }
 
 fn parse_watch(ast: NodeWrapper) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
@@ -495,4 +498,15 @@ fn parse_watch(ast: NodeWrapper) -> Result<(Vec<Identifier>, Rc<FruStatement>), 
     let body = ast.parse_child_statement("body")?.wrap_rc();
 
     Ok((args, body))
+}
+
+fn parse_formal_parameters(ast: NodeWrapper) -> Result<Vec<Identifier>, ParseError> {
+    ast.parse_children("args", NodeWrapper::ident)
+}
+
+fn parse_argument_list(ast: NodeWrapper) -> Result<Vec<FruExpression>, ParseError> {
+    ast.parse_children("args",
+                       |x|
+                           x.parse_child_expression("value"),
+    )
 }

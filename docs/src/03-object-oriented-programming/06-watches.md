@@ -6,9 +6,7 @@ Fields can be verified using watches. They are essentially methods that run when
 struct Vector {
     x;
     y;
-
-    -----constraints-----
-
+} constraints {
     watch(x) {
         if x < -1000 {
             x = -1000;
