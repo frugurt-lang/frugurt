@@ -193,7 +193,7 @@ fn search_for_errors(ast: Node) -> ParseError {
     let mut cur = ast.walk();
 
     loop {
-        if cur.node().is_error() {
+        if cur.node().is_error() || cur.node().is_missing() {
             return ParseError::ParsingError {
                 position: cur.node().range(),
             };
@@ -261,15 +261,32 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
 
         "continue_statement" => FruStatement::Continue,
 
-        "operator_statement" => FruStatement::Operator {
-            ident: ast.get_child_ident("ident")?,
-            commutative: ast.get_child("commutative").is_ok(),
-            left_ident: ast.get_child_ident("left_ident")?,
-            left_type_ident: ast.get_child_ident("left_type_ident")?,
-            right_ident: ast.get_child_ident("right_ident")?,
-            right_type_ident: ast.get_child_ident("right_type_ident")?,
-            body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
-        },
+        "operator_statement" => {
+            let commutative = ast.get_child("commutative").is_ok();
+
+            let left_type_ident = ast.get_child_ident("left_type_ident")?;
+            let right_type_ident = ast.get_child_ident("right_type_ident")?;
+
+            if commutative && left_type_ident == right_type_ident {
+                return Err(ParseError::Error {
+                    position: ast.get_child("commutative")?.range(),
+                    error: format!(
+                        "commutative operators must have different types, but {} was used twice",
+                        left_type_ident
+                    ),
+                });
+            }
+
+            FruStatement::Operator {
+                ident: ast.get_child_ident("ident")?,
+                commutative,
+                left_ident: ast.get_child_ident("left_ident")?,
+                left_type_ident,
+                right_ident: ast.get_child_ident("right_ident")?,
+                right_type_ident,
+                body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
+            }
+        }
 
         "type_statement" => {
             let type_type = match ast.get_child_text("type_type")? {

@@ -1,8 +1,7 @@
 use std::rc::Rc;
 
 use crate::interpreter::{
-    control::Control, error::FruError, scope::Scope, statement::FruStatement
-    , value::fru_value::FruValue,
+    control::Control, error::FruError, scope::Scope, statement::FruStatement, value::fru_value::FruValue,
 };
 
 #[derive(Clone)]
@@ -14,13 +13,17 @@ impl FruWatch {
     pub fn run(&self, scope: Rc<Scope>) -> Result<(), FruError> {
         let signal = self.body.execute(scope);
 
-        match signal {
-            Control::Nah | Control::Return(FruValue::Nah) => Ok(()),
-            Control::Return(v) => {
-                FruError::new_unit(format!("watch returned {:?}, but should be None", v))
+        if let Err(signal) = signal {
+            match signal {
+                Control::Return(FruValue::Nah) => Ok(()),
+                Control::Return(v) => {
+                    FruError::new_unit(format!("watch returned {:?}, but should be None", v))
+                }
+                Control::Error(e) => Err(e),
+                other => FruError::new_unit(format!("unexpected signal {:?}", other)),
             }
-            Control::Error(e) => Err(e),
-            other => FruError::new_unit(format!("unexpected signal {:?}", other)),
+        } else {
+            Ok(())
         }
     }
 }

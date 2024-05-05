@@ -81,3 +81,20 @@ fn test_function3() {
             f();
         "#)
 }
+
+#[test]
+#[should_panic]
+fn test_double_let() {
+    run(r#"
+            let a = 1;
+            let a = 2;
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_not_exist() {
+    run(r#"
+            print(a);
+        "#)
+}

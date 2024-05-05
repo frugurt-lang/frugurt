@@ -33,13 +33,16 @@ impl AnyOperator {
                 new_scope.let_variable(*left_ident, left_val)?;
                 new_scope.let_variable(*right_ident, right_val)?;
 
-                let res = body.execute(new_scope);
+                let signal = body.execute(new_scope);
 
-                match res {
-                    Control::Nah => Ok(FruValue::Nah),
-                    Control::Return(v) => Ok(v),
-                    Control::Error(e) => Err(e),
-                    other => FruError::new_val(format!("unexpected signal {:?}", other)),
+                if let Err(signal) = signal {
+                    match signal {
+                        Control::Return(v) => Ok(v),
+                        Control::Error(e) => Err(e),
+                        other => FruError::new_val(format!("unexpected signal {:?}", other)),
+                    }
+                } else {
+                    Ok(FruValue::Nah)
                 }
             }
             AnyOperator::BuiltinOperator(op) => op(left_val, right_val),

@@ -157,7 +157,7 @@ impl FruExpression {
                     }
 
                     unexpected => FruError::new_val_control(format!(
-                        "Expected boolean, got {}",
+                        "Expected bool in if condition, got {}",
                         unexpected.get_type_identifier()
                     )),
                 }

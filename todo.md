@@ -4,8 +4,8 @@
 
 # TODO
 
-- add function named parameters, introduce ArgumentList
-    - add `overload` keyword for functions and methods
+- document named parameters
+- add `overload` keyword for functions and methods
 - add trait polymorphism for native types
     - move FruValue::Object and FruValue::Type to FruValue:NativeObject
     - add collections
@@ -22,7 +22,6 @@
 
 # Needed fixes
 
-- get rid of `Nah` in `Control`
 - implement Display for FruValue and fix for FruObject
 - remove or fix BACKWARDS_MAP in Identifier (fails testing with some probability)
 - introduce a new error type for "method/field not found"

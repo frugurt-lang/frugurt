@@ -12,16 +12,19 @@ pub fn execute_file(path: &Path) -> Result<Rc<Scope>, FruError> {
 
     let global_scope = Scope::new_global();
 
-    let result = ast.execute(global_scope.clone());
+    let signal = ast.execute(global_scope.clone());
 
-    match result {
-        Control::Nah => {}
-        Control::Error(e) => return Err(e),
-        unexpected_signal => return Err(FruError::new(format!(
-            "Unexpected signal: {:?}",
-            unexpected_signal
-        )))
+    if let Err(signal) = signal {
+        Err(
+            match signal {
+                Control::Error(err) => err,
+                unexpected => FruError::new(format!(
+                    "Unexpected signal: {:?}",
+                    unexpected
+                ))
+            }
+        )
+    } else {
+        Ok(global_scope)
     }
-
-    Ok(global_scope)
 }

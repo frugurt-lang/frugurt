@@ -1,4 +1,8 @@
-use std::{fmt::Debug, rc::Rc};
+use std::{
+    fmt::Debug,
+    rc::Rc,
+    collections::HashSet,
+};
 
 use crate::interpreter::{
     control::Control,
@@ -17,6 +21,9 @@ pub enum ArgumentError {
         ident: Identifier,
     },
     NotSetPositional {
+        ident: Identifier,
+    },
+    DoesNotExist {
         ident: Identifier,
     },
 }
@@ -77,12 +84,16 @@ impl FruFunction {
 
         self.argument_idents.apply(args, new_scope.clone())?;
 
-        let res = self.body.execute(new_scope);
-        match res {
-            Control::Nah => Ok(FruValue::Nah),
-            Control::Return(v) => Ok(v),
-            Control::Error(e) => Err(e),
-            other => FruError::new_val(format!("unexpected signal {:?}", other)),
+        let signal = self.body.execute(new_scope);
+
+        if let Err(signal) = signal {
+            match signal {
+                Control::Return(v) => Ok(v),
+                Control::Error(e) => Err(e),
+                other => FruError::new_val(format!("unexpected signal {:?}", other)),
+            }
+        } else {
+            Ok(FruValue::Nah)
         }
     }
 }
@@ -92,9 +103,17 @@ impl FormalParameters {
     pub fn apply(&self, evaluated: EvaluatedArgumentList, scope: Rc<Scope>) -> Result<(), FruError> {
         let mut next_positional = 0;
 
+        let acceptable: HashSet<_> = self.args.iter()
+                                         .map(|(x, _)| *x).collect();
+
         for (ident, value) in evaluated.args {
             let ident = match ident {
-                Some(ident) => ident,
+                Some(ident) => {
+                    if !acceptable.contains(&ident) {
+                        return Err(ArgumentError::DoesNotExist { ident }.into());
+                    }
+                    ident
+                }
                 None => {
                     if next_positional >= self.args.len() {
                         return Err(ArgumentError::TooMany.into());
@@ -163,11 +182,6 @@ impl Into<FruError> for ArgumentError {
     }
 }
 
-impl Debug for FruFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Function")
-    }
-}
 
 impl Debug for AnyFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

@@ -6,6 +6,7 @@ fn test_box() {
             struct Box {
                 pub fe : Number;
                 static val = 5;
+                static nope;
             } constraints {
                 watch(fe) {
                     val = fe;
@@ -21,6 +22,10 @@ fn test_box() {
             b.fe = 10;
             assert_eq(b.fe, 10);
             assert_eq(b.val, 10);
+
+            assert_eq(Box.nope, nah);
+
+            print(b, Box);
         "#)
 }
 
@@ -28,7 +33,7 @@ fn test_box() {
 fn test_vector() {
     run(r#"
             struct Vec2 {
-                x;
+                pub x;
                 y;
                 static m = 10;
             } impl {
@@ -59,6 +64,8 @@ fn test_vector() {
             let v2 = Vec2.new45(5);
             
             assert_eq(v2.y, 5);
+
+            print(v, v2);
         "#)
 }
 
@@ -157,6 +164,36 @@ fn test_operators() {
 }
 
 #[test]
+fn test_scope() {
+    run(r#"
+            let Box = {
+                let inner = 7;
+
+                struct Box {
+                } impl {
+                    getAndInc() {
+                        inner = inner + 1;
+                        inner
+                    }
+
+                    static inc() {
+                        inner = inner + 1;
+                    }
+                }
+
+                Box
+            };
+
+            let b = Box :{ };
+
+            assert_eq(b.getAndInc(), 8);
+            Box.inc();
+            assert_eq(b.getAndInc(), 10);
+        "#)
+}
+
+
+#[test]
 fn test_named_fields() {
     run(r#"
             struct Vec2 {
@@ -246,5 +283,27 @@ fn test_named_error6() {
             }
 
             Vec2 :{ 1 };
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "variable Box already exists")]
+fn test_redeclaration() {
+    run(r#"
+            let Box = 1;
+
+            struct Box {}
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_static_error() {
+    run(r#"
+            struct Box {
+                static val = 5 / 0;
+            }
+
+            let b = Box :{ };
         "#)
 }

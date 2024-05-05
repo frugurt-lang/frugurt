@@ -52,3 +52,45 @@ fn test_string_comparison() {
         assert_eq("hello" != "world", true);
         "#)
 }
+
+#[test]
+#[should_panic]
+fn test_unknown_operator() {
+    run(r#"
+            4 +++ 6;
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "zero")]
+fn test_divide_by_zero() {
+    run(r#"
+            1 / 0;
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "zero")]
+fn test_mod_by_zero() {
+    run(r#"
+            1 % 0;
+        "#)
+}
+
+
+#[test]
+#[should_panic(expected = "integer")]
+fn test_string_times_negative() {
+    run(r#"
+            "asd" * -4;
+        "#)
+}
+
+
+#[test]
+#[should_panic(expected = "integer")]
+fn test_string_times_float() {
+    run(r#"
+            "asd" * 4.5;
+        "#)
+}

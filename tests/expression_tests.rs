@@ -30,3 +30,19 @@ fn test_precedence() {
             assert_eq(3 + 4 < 5 * 3, true);    
         "#)
 }
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_1() {
+    run(r#"
+            if 1 / 0 { 1 } else { 2 };
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_2() {
+    run(r#"
+            if false { 1 } else { 1 / 0 };
+        "#)
+}

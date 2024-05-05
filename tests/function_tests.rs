@@ -1,7 +1,7 @@
 use crate::tests::run;
 
 #[test]
-fn test_function1() {
+fn test_function() {
     run(r#"
             let func = fn (x, y) {
                 return x + y + {x * y};
@@ -52,7 +52,7 @@ fn test_function_nested() {
 }
 
 #[test]
-fn test_curry() {
+fn test_curry_1() {
     run(r#"
             let f = fn (a, b, c) {a + b + c};
             
@@ -63,6 +63,17 @@ fn test_curry() {
             assert_eq(f(1, 2, 3), 6);
             
             assert_eq(g$(2)(5), 8);
+
+            print(f);
+        "#)
+}
+
+#[test]
+fn test_curry_2() {
+    run(r#"
+            let g = print$(1);
+            g(2);
+            print(g);
         "#)
 }
 
@@ -105,41 +116,138 @@ fn test_named_eval() {
 }
 
 #[test]
-#[should_panic]
-fn test_named_error1() {
+fn test_named_eval_2() {
     run(r#"
-            let f = fn (a = 1, b = 2) {2 * a + b};
+            let f = fn (a, b = 5 / a) {2 * a + b};
 
-            f(c = 1)
+           assert_eq(f(1), 7);
         "#)
 }
 
 #[test]
-#[should_panic]
-fn test_named_error2() {
+#[should_panic(expected = "DoesNotExist")]
+fn test_named_error_1() {
     run(r#"
             let f = fn (a = 1, b = 2) {2 * a + b};
 
-            f(a = 1, a = 1)
+            f(c: 1);
         "#)
 }
 
 #[test]
-#[should_panic]
-fn test_named_error3() {
+#[should_panic(expected = "SameSetTwice")]
+fn test_named_error_2() {
     run(r#"
             let f = fn (a = 1, b = 2) {2 * a + b};
 
-            f(1, a = 1)
+            f(a: 1, a: 1);
         "#)
 }
 
 #[test]
-#[should_panic]
-fn test_named_error4() {
+#[should_panic(expected = "SameSetTwice")]
+fn test_named_error_3() {
+    run(r#"
+            let f = fn (a = 1, b = 2) {2 * a + b};
+
+            f(1, a: 1);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "NotSet")]
+fn test_named_error_4() {
     run(r#"
             let f = fn (a, b = 2) {2 * a + b};
 
-            f(b = 1)
+            f(b: 1);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "Positional parameters should be before default parameters")]
+fn test_named_error_5() {
+    run(r#"
+            fn (a = 1, b) {2 * a + b};
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "Positional arguments should be before named arguments")]
+fn test_named_error_6() {
+    run(r#"
+            let f = fn (a, b) {2 * a + b};
+
+            f(b: 1, 1);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_named_error_7() {
+    run(r#"
+            let f = fn (a, b = 5 / a) {2 * a + b};
+
+            f(0);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "TooMany")]
+fn test_count_error_1() {
+    run(r#"
+            let f = fn (a, b) {};
+
+            f(1, 2, 3);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "NotSet")]
+fn test_count_error_2() {
+    run(r#"
+            let f = fn (a, b) {};
+
+            f(1);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Continue")]
+fn test_unexpected_signal_1() {
+    run(r#"
+            fn () {continue;}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Break")]
+fn test_unexpected_signal_2() {
+    run(r#"
+            fn () {break;}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Continue")]
+fn test_unexpected_signal_default_1() {
+    run(r#"
+            fn (a={continue; 1}) {}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Break")]
+fn test_unexpected_signal_default_2() {
+    run(r#"
+            fn (a={break; 1}) {}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Return")]
+fn test_unexpected_signal_default_3() {
+    run(r#"
+            fn (a={return 1; 1}) {}();
         "#)
 }

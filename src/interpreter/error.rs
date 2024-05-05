@@ -33,8 +33,8 @@ impl FruError {
         })
     }
 
-    pub fn new_control(message: String) -> Control {
-        Control::Error(FruError { message })
+    pub fn new_control(message: String) -> Result<(), Control> {
+        Err(Control::Error(FruError { message }))
     }
 
     pub fn new_val_control(message: String) -> Result<FruValue, Control> {

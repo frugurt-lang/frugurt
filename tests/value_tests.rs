@@ -47,3 +47,19 @@ fn test_bool() {
         assert_eq(b, false);
         "#);
 }
+
+#[test]
+#[should_panic]
+fn test_not_eq_1() {
+    run(r#"
+            assert_eq(1, 2);
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_not_eq_2() {
+    run(r#"
+            assert_eq(1, "1");
+        "#)
+}
