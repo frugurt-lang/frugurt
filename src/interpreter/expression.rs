@@ -7,7 +7,7 @@ use crate::interpreter::{
     scope::Scope,
     statement::FruStatement,
     value::fru_value::FruValue,
-    value::function::{AnyFunction, FruFunction},
+    value::function::{AnyFunction, FruFunction, ArgumentList, EvaluatedArgumentList, FormalParameters},
 };
 
 #[derive(Debug, Clone)]
@@ -19,7 +19,7 @@ pub enum FruExpression {
         ident: Identifier
     },
     Function {
-        args: Vec<Identifier>,
+        args: FormalParameters,
         body: Rc<FruStatement>,
     },
     Block {
@@ -28,15 +28,15 @@ pub enum FruExpression {
     },
     Call {
         what: Box<FruExpression>,
-        args: Vec<FruExpression>,
+        args: ArgumentList,
     },
     CurryCall {
         what: Box<FruExpression>,
-        args: Vec<FruExpression>,
+        args: ArgumentList,
     },
     Instantiation {
         what: Box<FruExpression>,
-        args: Vec<FruExpression>,
+        args: ArgumentList,
     },
     FieldAccess {
         what: Box<FruExpression>,
@@ -54,10 +54,14 @@ pub enum FruExpression {
     },
 }
 
-fn eval_args(args: &[FruExpression], scope: Rc<Scope>) -> Result<Vec<FruValue>, Control> {
-    args.iter()
-        .map(|arg| arg.evaluate(scope.clone()))
-        .try_collect()
+fn eval_args(args: &ArgumentList, scope: Rc<Scope>) -> Result<EvaluatedArgumentList, Control> {
+    Ok(EvaluatedArgumentList {
+        args: args.args.iter().map(
+            |(ident, arg)| -> Result<_, Control>{
+                Ok((*ident, arg.evaluate(scope.clone())?))
+            }
+        ).try_collect()?
+    })
 }
 
 impl FruExpression {

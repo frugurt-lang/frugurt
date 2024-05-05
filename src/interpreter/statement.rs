@@ -7,12 +7,11 @@ use crate::interpreter::{
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
-    value::fru_type::{FruField, FruType, FruTypeInternal},
+    value::fru_type::{FruField, FruType, FruTypeInternal, TypeType},
     value::fru_value::FruValue,
     value::fru_watch::FruWatch,
-    value::function::FruFunction,
+    value::function::{FormalParameters, FruFunction},
     value::operator::AnyOperator,
-    value::fru_type::TypeType,
 };
 
 #[derive(Debug, Clone)]
@@ -65,8 +64,7 @@ pub enum FruStatement {
         fields: Vec<FruField>,
         static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
         watches: Vec<(Vec<Identifier>, Rc<FruStatement>)>,
-        methods: Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>,
-        static_methods: Vec<(Identifier, Vec<Identifier>, Rc<FruStatement>)>,
+        methods: Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>,
     },
 }
 
@@ -228,39 +226,27 @@ impl FruStatement {
                 static_fields,
                 watches,
                 methods,
-                static_methods,
             } => {
                 if *ident == Identifier::new("NahIdWin") {
                     easter_eggs::launch_satoru();
                 }
 
-                let methods = methods
-                    .iter()
-                    .map(|(ident, args, body)| {
-                        (
-                            *ident,
-                            FruFunction {
-                                argument_idents: args.clone(),
-                                body: body.clone(),
-                                scope: scope.clone(),
-                            },
-                        )
-                    })
-                    .collect();
+                let mut methods_ = HashMap::new();
+                let mut static_methods_ = HashMap::new();
 
-                let static_methods = static_methods
-                    .iter()
-                    .map(|(ident, args, body)| {
-                        (
-                            *ident,
-                            FruFunction {
-                                argument_idents: args.clone(),
-                                body: body.clone(),
-                                scope: scope.clone(),
-                            },
-                        )
-                    })
-                    .collect();
+                for (is_static, ident, arg_list, body) in methods {
+                    let mt = FruFunction {
+                        argument_idents: arg_list.clone(),
+                        body: body.clone(),
+                        scope: scope.clone(),
+                    };
+                    if *is_static {
+                        static_methods_.insert(*ident, mt);
+                    } else {
+                        methods_.insert(*ident, mt);
+                    }
+                }
+
 
                 let mut static_fields_evaluated = HashMap::new();
                 for (field, value) in static_fields {
@@ -298,8 +284,8 @@ impl FruStatement {
                     static_fields: RefCell::new(static_fields_evaluated),
                     watches_by_field,
                     watches,
-                    methods,
-                    static_methods,
+                    methods: methods_,
+                    static_methods: static_methods_,
                     scope: scope.clone(),
                 };
 

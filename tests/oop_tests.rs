@@ -92,7 +92,7 @@ fn test_class() {
                 f;
             }
             
-            let b = Box :{ 5 };
+            let b = Box :{ f: 5 };
             assert_eq(b.f, 5);
             
             b.f = 10;
@@ -153,5 +153,98 @@ fn test_operators() {
             assert_eq(5 * v1 * 2, Vec2 :{ 10, 20 });
             
             assert_eq(6 +-*/%=<>&|^!? 9, 54);
+        "#)
+}
+
+#[test]
+fn test_named_fields() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            let v = Vec2 :{ x: 1, y: 2 };
+            let v2 = Vec2 :{ y: 2, x: 1 };
+
+            assert_eq(v, v2);
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error1() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            Vec2 :{};
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error2() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            Vec2 :{x: 1, x: 2};
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error3() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            Vec2 :{x: 1, c: 2};
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error4() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            Vec2 :{1, y: 2};
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error5() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            Vec2 :{x: 1, y: 1, z: 2};
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error6() {
+    run(r#"
+            struct Vec2 {
+                x;
+                y;
+            }
+
+            Vec2 :{ 1 };
         "#)
 }

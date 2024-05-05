@@ -108,6 +108,10 @@ impl Scope {
     pub fn set_operator(&self, ident: OperatorIdentifier, op: AnyOperator) {
         self.operators.borrow_mut().insert(ident, op);
     }
+
+    pub fn has_variable(&self, ident: Identifier) -> bool {
+        self.variables.borrow().contains_key(&ident)
+    }
 }
 
 impl ScopeAncestor {

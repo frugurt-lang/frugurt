@@ -5,11 +5,11 @@ use crate::interpreter::{
     identifier::Identifier,
     value::fru_object::FruObject,
     value::fru_type::FruType,
-    value::function::{AnyFunction, ArgCountError, CurriedFunction},
+    value::function::{AnyFunction, CurriedFunction, EvaluatedArgumentList},
     value::native::object::NativeObject,
 };
 
-pub type TFnBuiltin = fn(Vec<FruValue>) -> Result<FruValue, FruError>;
+pub type TFnBuiltin = fn(EvaluatedArgumentList) -> Result<FruValue, FruError>;
 pub type TOpBuiltin = fn(FruValue, FruValue) -> Result<FruValue, FruError>;
 
 #[derive(Clone)]
@@ -43,7 +43,7 @@ impl FruValue {
         }
     }
 
-    pub fn call(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
             FruValue::Function(fun) => fun.call(args),
             FruValue::NativeObject(obj) => obj.call(args),
@@ -51,22 +51,15 @@ impl FruValue {
         }
     }
 
-    pub fn curry_call(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn curry_call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
             FruValue::Function(func) => {
-                if let Err(err) = func.get_arg_count().satisfies(args.len()) {
-                    match err {
-                        ArgCountError::TooFewArgs { .. } => {}
-                        _ => {
-                            return FruError::new_val(format!("{:?}", err));
-                        }
-                    }
-                }
+                // TODO: test compatibility
 
                 match func {
                     AnyFunction::CurriedFunction(func) => {
                         let mut new_args = func.saved_args.clone(); // TODO: fru_clone()?
-                        new_args.extend(args);
+                        new_args.args.extend(args.args);
 
                         Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
                             CurriedFunction {
@@ -91,7 +84,7 @@ impl FruValue {
         }
     }
 
-    pub fn instantiate(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn instantiate(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
             FruValue::Type(type_) => type_.instantiate(args),
 
@@ -141,6 +134,7 @@ impl FruValue {
         }
     }
 }
+
 impl PartialEq for FruValue {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {

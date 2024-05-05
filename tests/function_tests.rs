@@ -80,3 +80,66 @@ fn test_overall() {
             assert_eq(g(1)(2), 3);
         "#)
 }
+
+#[test]
+fn test_named() {
+    run(r#"
+            let f = fn (a = 1, b = 2) {2 * a + b};
+
+            assert_eq(f(), 4);
+            assert_eq(f(3), 8);
+            assert_eq(f(3, 4), 10);
+            assert_eq(f(b: 3, a: 4), 11);
+            assert_eq(f(b: 6), 8);
+        "#)
+}
+
+#[test]
+fn test_named_eval() {
+    run(r#"
+            let f = fn (a = 1, b = a + 2) {2 * a + b};
+
+            assert_eq(f(), 5);
+            assert_eq(f(b: 7), 9);
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error1() {
+    run(r#"
+            let f = fn (a = 1, b = 2) {2 * a + b};
+
+            f(c = 1)
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error2() {
+    run(r#"
+            let f = fn (a = 1, b = 2) {2 * a + b};
+
+            f(a = 1, a = 1)
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error3() {
+    run(r#"
+            let f = fn (a = 1, b = 2) {2 * a + b};
+
+            f(1, a = 1)
+        "#)
+}
+
+#[test]
+#[should_panic]
+fn test_named_error4() {
+    run(r#"
+            let f = fn (a, b = 2) {2 * a + b};
+
+            f(b = 1)
+        "#)
+}
