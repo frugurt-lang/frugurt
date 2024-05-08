@@ -82,7 +82,6 @@ pub enum ParseError {
 
 enum TypeExtension {
     Impl(Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>),
-    Constraints(Vec<(Vec<Identifier>, Rc<FruStatement>)>),
 }
 
 enum AnyField {
@@ -312,15 +311,12 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             }
 
             let mut methods = Vec::new();
-
-            let mut watches = Vec::new();
-
+            
             for extension in ast.parse_children("extensions", parse_extension)? {
                 match extension {
                     TypeExtension::Impl(xs) => {
                         methods.extend(xs);
                     }
-                    TypeExtension::Constraints(x) => watches.extend(x),
                 }
             }
 
@@ -329,7 +325,6 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 ident,
                 fields,
                 static_fields,
-                watches,
                 methods,
             }
         }
@@ -478,11 +473,6 @@ fn parse_extension(ast: NodeWrapper) -> Result<TypeExtension, ParseError> {
                 ast.parse_children("methods", parse_method)?
             )
         }
-        "type_constraints_extension" => {
-            TypeExtension::Constraints(
-                ast.parse_children("watches", parse_watch)?
-            )
-        }
 
         unexpected => return Err(ParseError::InvalidAst {
             position: ast.range(),
@@ -501,14 +491,6 @@ fn parse_method(ast: NodeWrapper) -> Result<(bool, Identifier, FormalParameters,
     let body = ast.parse_child("body", parse_function_body)?.wrap_rc();
 
     Ok((is_static, ident, args, body))
-}
-
-fn parse_watch(ast: NodeWrapper) -> Result<(Vec<Identifier>, Rc<FruStatement>), ParseError> {
-    let args = ast.parse_children("args", NodeWrapper::ident)?;
-
-    let body = ast.parse_child_statement("body")?.wrap_rc();
-
-    Ok((args, body))
 }
 
 fn parse_formal_parameters(ast: NodeWrapper) -> Result<FormalParameters, ParseError> {

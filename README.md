@@ -37,9 +37,6 @@ Also, there are three flavors of types:
 - `class` - mutable, passed by reference
 - `data` - immutable, passed by reference
 
-There is also builtin data validation, using "watches",
-see [docs](https://frugurt-lang.github.io/frugurt/03-object-oriented-programming/06-watches.html).
-
 ```frugurt
 struct Vector {
     x;
@@ -53,24 +50,6 @@ struct Vector {
         // fields are accessible like in complied languages
         // there are static fields too (see docs)
         Vector:{x + other.x, y + other.y }
-    }
-} constraints {
-    watch (x) {
-        if x < -1000 {
-            x = -1000;
-        }
-        if x > 1000 {
-            x = 1000;
-        }
-    }
-
-    watch (y) {
-        if y < -1000 {
-            y = -1000;
-        }
-        if y > 1000 {
-            y = 1000;
-        }
     }
 }
 

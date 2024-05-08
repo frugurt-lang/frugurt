@@ -85,12 +85,6 @@ impl FruObject {
 
         self.set_kth_field(pos, value);
 
-        for watch in self.get_type().get_watches_by_field(ident) {
-            let scope =
-                Scope::new_with_object_then_parent(self.clone(), self.get_type().get_scope());
-            watch.run(scope)?;
-        }
-
         Ok(())
     }
 

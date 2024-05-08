@@ -8,7 +8,6 @@ use crate::interpreter::{
     scope::Scope,
     value::fru_type::{FruField, FruType, FruTypeInternal, TypeType},
     value::fru_value::FruValue,
-    value::fru_watch::FruWatch,
     value::function::{FormalParameters, FruFunction},
     value::operator::AnyOperator,
 };
@@ -62,7 +61,6 @@ pub enum FruStatement {
         ident: Identifier,
         fields: Vec<FruField>,
         static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
-        watches: Vec<(Vec<Identifier>, Rc<FruStatement>)>,
         methods: Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>,
     },
 }
@@ -199,7 +197,6 @@ impl FruStatement {
                 ident,
                 fields,
                 static_fields,
-                watches,
                 methods,
             } => {
                 let mut methods_ = HashMap::new();
@@ -230,31 +227,11 @@ impl FruStatement {
                     static_fields_evaluated.insert(field.ident, value);
                 }
 
-                let raw_watches: Vec<(Vec<Identifier>, FruWatch)> = watches
-                    .iter()
-                    .map(|(idents, body)| (idents.clone(), (FruWatch { body: body.clone() })))
-                    .collect();
-
-                let watches = raw_watches.iter().map(|(_, x)| x.clone()).collect();
-
-                let mut watches_by_field: HashMap<_, Vec<FruWatch>> = HashMap::new();
-
-                for (idents, watch) in raw_watches {
-                    for ident in idents {
-                        watches_by_field
-                            .entry(ident)
-                            .or_default()
-                            .push(watch.clone());
-                    }
-                }
-
                 let internal = FruTypeInternal {
                     ident: *ident,
                     type_type: *type_type,
                     fields: fields.clone(),
                     static_fields: RefCell::new(static_fields_evaluated),
-                    watches_by_field,
-                    watches,
                     methods: methods_,
                     static_methods: static_methods_,
                     scope: scope.clone(),

@@ -6,7 +6,6 @@ use crate::interpreter::{
     scope::Scope,
     value::fru_object::FruObject,
     value::fru_value::FruValue,
-    value::fru_watch::FruWatch,
     value::function::{AnyFunction, EvaluatedArgumentList, FruFunction},
 };
 
@@ -22,8 +21,6 @@ pub struct FruTypeInternal {
     pub fields: Vec<FruField>,
     pub static_fields: RefCell<HashMap<Identifier, FruValue>>,
     // TODO: change for FruField?
-    pub watches_by_field: HashMap<Identifier, Vec<FruWatch>>,
-    pub watches: Vec<FruWatch>,
     pub methods: HashMap<Identifier, FruFunction>,
     pub static_methods: HashMap<Identifier, FruFunction>,
     pub scope: Rc<Scope>,
@@ -60,17 +57,6 @@ impl FruType {
 
     pub fn get_fields(&self) -> &[FruField] {
         self.internal.fields.as_slice()
-    }
-
-    pub fn get_watches_by_field(&self, ident: Identifier) -> &[FruWatch] {
-        self.internal
-            .watches_by_field
-            .get(&ident)
-            .map_or_else(Default::default, Vec::as_slice)
-    }
-
-    pub fn get_scope(&self) -> Rc<Scope> {
-        self.internal.scope.clone()
     }
 
     pub fn get_field_k(&self, ident: Identifier) -> Option<usize> {
@@ -146,7 +132,6 @@ impl FruType {
             return FruError::new_val(format!("field `{}` does not exist", *ident));
         }
 
-        // TODO: fire watches
         Ok(FruObject::new_object(self.clone(), args))
     }
 }

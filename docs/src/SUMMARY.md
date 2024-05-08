@@ -16,4 +16,3 @@
   - [Operators](./03-object-oriented-programming/03-operators.md)
   - [Methods](./03-object-oriented-programming/04-methods.md)
   - [Statics](./03-object-oriented-programming/05-statics.md)
-  - [Watches](./03-object-oriented-programming/06-watches.md)
