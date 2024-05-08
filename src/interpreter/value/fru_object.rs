@@ -66,7 +66,8 @@ impl FruObject {
 
     pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if self.get_type().get_type_type() == TypeType::Data {
-            return FruError::new_unit_slice("cannot set field in 'data' type");
+            return FruError::new_unit(format!("cannot set field `{}` in 'data' type `{}`",
+                                              ident, value.get_type_identifier()));
         }
 
         let pos = self.get_type().get_field_k(ident);

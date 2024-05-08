@@ -42,7 +42,7 @@ fn test_precedence() {
 }
 
 #[test]
-#[should_panic(expected = "zero")]
+#[should_panic(expected = "division by zero")]
 fn test_divide_by_zero() {
     run(r#"
             1 / 0;
@@ -50,7 +50,7 @@ fn test_divide_by_zero() {
 }
 
 #[test]
-#[should_panic(expected = "zero")]
+#[should_panic(expected = "division by zero")]
 fn test_mod_by_zero() {
     run(r#"
             1 % 0;
@@ -58,7 +58,7 @@ fn test_mod_by_zero() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "operator `Operator(Number +++ Number)` does not exist")]
 fn test_unknown_operator() {
     run(r#"
             4 +++ 6;

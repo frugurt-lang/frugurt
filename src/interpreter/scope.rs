@@ -73,7 +73,7 @@ impl Scope {
 
     pub fn let_variable(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if self.variables.borrow().contains_key(&ident) {
-            return FruError::new_unit(format!("variable {:?} already exists", ident));
+            return FruError::new_unit(format!("variable `{:?}` already exists", ident));
         }
 
         self.variables.borrow_mut().insert(ident, value);
@@ -95,7 +95,7 @@ impl Scope {
         } else {
             match self.parent {
                 ScopeAncestor::None => Err(FruError::new(format!(
-                    "operator {:?} does not exist",
+                    "operator `{:?}` does not exist",
                     ident
                 ))),
                 ScopeAncestor::Parent(ref parent)

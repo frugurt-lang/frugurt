@@ -78,7 +78,7 @@ fn test_named_fields() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "missing field `x`")]
 fn test_named_error_1() {
     run(r#"
             struct Vec2 {
@@ -91,7 +91,7 @@ fn test_named_error_1() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "field `x` is set more than once")]
 fn test_named_error_2() {
     run(r#"
             struct Vec2 {
@@ -104,7 +104,7 @@ fn test_named_error_2() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "missing field `y`")]
 fn test_named_error_3() {
     run(r#"
             struct Vec2 {
@@ -117,7 +117,7 @@ fn test_named_error_3() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "All arguments must be either named or not named at the same time at")]
 fn test_named_error_4() {
     run(r#"
             struct Vec2 {
@@ -130,7 +130,7 @@ fn test_named_error_4() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "field `z` does not exist")]
 fn test_named_error_5() {
     run(r#"
             struct Vec2 {
@@ -143,7 +143,7 @@ fn test_named_error_5() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "missing field `y`")]
 fn test_named_error_6() {
     run(r#"
             struct Vec2 {
@@ -156,7 +156,7 @@ fn test_named_error_6() {
 }
 
 #[test]
-#[should_panic(expected = "variable Box already exists")]
+#[should_panic(expected = "variable `Box` already exists")]
 fn test_redeclaration() {
     run(r#"
             let Box = 1;

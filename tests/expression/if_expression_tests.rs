@@ -16,7 +16,7 @@ fn test_if_else() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "Expected bool in if condition, got String")]
 fn test_type_mismatch() {
     run(r#"
             if "nope" {

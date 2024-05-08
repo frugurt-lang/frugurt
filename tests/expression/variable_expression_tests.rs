@@ -75,7 +75,7 @@ fn test_function2() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "variable `a` does not exist")]
 fn test_function3() {
     run(r#"
             let f = fn () { a = 7; };
@@ -84,7 +84,7 @@ fn test_function3() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "variable `a` already exist")]
 fn test_double_let() {
     run(r#"
             let a = 1;
@@ -93,7 +93,7 @@ fn test_double_let() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "variable `a` does not exist")]
 fn test_not_exist() {
     run(r#"
             print(a);

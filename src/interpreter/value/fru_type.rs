@@ -105,7 +105,7 @@ impl FruType {
             ))));
         }
 
-        FruError::new_val(format!("static field or method {} not found", ident))
+        FruError::new_val(format!("static field or method `{}` not found", ident))
     }
 
     pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
@@ -113,7 +113,7 @@ impl FruType {
             *field = value;
             Ok(())
         } else {
-            FruError::new_unit(format!("static field {} not found", ident))
+            FruError::new_unit(format!("static field `{}` not found", ident))
         }
     }
 
@@ -128,7 +128,7 @@ impl FruType {
                 None => fields[n].ident,
             };
             if obj_fields.contains_key(&ident) {
-                return FruError::new_val(format!("field {} is set more than once", ident));
+                return FruError::new_val(format!("field `{}` is set more than once", ident));
             }
             obj_fields.insert(ident, value);
         }
@@ -136,11 +136,14 @@ impl FruType {
         let mut args = Vec::new();
 
         for FruField { ident, .. } in fields {
-            args.push(obj_fields.remove(&ident).unwrap());
+            match obj_fields.remove(ident) {
+                Some(value) => args.push(value),
+                None => return FruError::new_val(format!("missing field `{}`", ident)),
+            }
         }
 
         if let Some(ident) = obj_fields.keys().next() {
-            return FruError::new_val(format!("unknown field {}", *ident));
+            return FruError::new_val(format!("field `{}` does not exist", *ident));
         }
 
         // TODO: fire watches
