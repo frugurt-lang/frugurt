@@ -4,8 +4,8 @@
 
 # TODO
 
-- add function named parameters, introduce ArgumentList
-    - add `overload` keyword for functions and methods
+- add `overload` keyword for functions and methods
+- add variadic parameters
 - add trait polymorphism for native types
     - move FruValue::Object and FruValue::Type to FruValue:NativeObject
     - add collections
@@ -18,15 +18,15 @@
 - implement "evil" features
 - make cd for windows and linux releases
 - add derivation and implicit derivation, and make them overridable (the main reason is equality of objects)
-- add computed properties
+- add computed properties and get rid of watches
 
 # Needed fixes
 
-- get rid of `Nah` in `Control`
 - implement Display for FruValue and fix for FruObject
 - remove or fix BACKWARDS_MAP in Identifier (fails testing with some probability)
 - introduce a new error type for "method/field not found"
 - automate wasm module for book
+- add `expected` to all `should_panic` tests
 
 # Possible improvements
 

@@ -1,4 +1,8 @@
-use std::{cmp::Ordering, fmt::Debug, ops::Sub, rc::Rc};
+use std::{
+    fmt::Debug,
+    rc::Rc,
+    collections::HashSet,
+};
 
 use crate::interpreter::{
     control::Control,
@@ -7,19 +11,21 @@ use crate::interpreter::{
     scope::Scope,
     statement::FruStatement,
     value::fru_value::{FruValue, TFnBuiltin},
+    expression::FruExpression,
 };
 
-#[derive(Debug, Clone, Copy)]
-pub enum ArgCount {
-    Exact(usize),
-    AtMost(usize),
-    Any,
-}
-
-#[derive(Clone, Copy)]
-pub enum ArgCountError {
-    TooManyArgs { expected: ArgCount, got: usize },
-    TooFewArgs { expected: ArgCount, got: usize },
+#[derive(Clone, Copy, Debug)]
+pub enum ArgumentError {
+    TooMany,
+    SameSetTwice {
+        ident: Identifier,
+    },
+    NotSetPositional {
+        ident: Identifier,
+    },
+    DoesNotExist {
+        ident: Identifier,
+    },
 }
 
 #[derive(Clone)]
@@ -31,175 +37,151 @@ pub enum AnyFunction {
 
 #[derive(Clone)]
 pub struct FruFunction {
-    pub argument_idents: Vec<Identifier>,
+    pub argument_idents: FormalParameters,
     pub body: Rc<FruStatement>,
     pub scope: Rc<Scope>,
+}
+
+#[derive(Clone, Debug)]
+pub struct FormalParameters {
+    pub args: Vec<(Identifier, Option<FruExpression>)>,
+    pub minimum_args: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct ArgumentList {
+    pub args: Vec<(Option<Identifier>, FruExpression)>,
+}
+
+#[derive(Clone, Debug)]
+pub struct EvaluatedArgumentList {
+    pub args: Vec<(Option<Identifier>, FruValue)>,
 }
 
 #[derive(Clone)]
 pub struct BuiltinFunction {
     pub function: TFnBuiltin,
-    pub argument_count: ArgCount,
 }
 
 pub struct CurriedFunction {
-    pub saved_args: Vec<FruValue>,
+    pub saved_args: EvaluatedArgumentList,
     pub function: Rc<AnyFunction>,
 }
 
-impl ArgCount {
-    pub fn satisfies(&self, got: usize) -> Result<(), ArgCountError> {
-        match self {
-            ArgCount::Exact(n) => match got.cmp(n) {
-                Ordering::Equal => Ok(()),
-                Ordering::Greater => Err(ArgCountError::TooManyArgs {
-                    expected: *self,
-                    got,
-                }),
-                Ordering::Less => Err(ArgCountError::TooFewArgs {
-                    expected: *self,
-                    got,
-                }),
-            },
-
-            ArgCount::AtMost(n) => {
-                if got <= *n {
-                    Ok(())
-                } else {
-                    Err(ArgCountError::TooManyArgs {
-                        expected: *self,
-                        got,
-                    })
-                }
-            }
-
-            ArgCount::Any => Ok(()),
-        }
-    }
-}
-
-impl Sub<usize> for ArgCount {
-    type Output = ArgCount;
-
-    fn sub(self, rhs: usize) -> Self::Output {
-        match self {
-            ArgCount::Exact(n) => ArgCount::Exact(n.checked_sub(rhs).unwrap()),
-            ArgCount::AtMost(n) => ArgCount::AtMost(n.checked_sub(rhs).unwrap()),
-            ArgCount::Any => ArgCount::Any,
-        }
-    }
-}
-
-impl ArgCountError {
-    pub fn to_error(self) -> FruError {
-        FruError::new(format!("{:?}", self))
-    }
-}
-
 impl AnyFunction {
-    pub fn call(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
-        if let Err(err) = self.get_arg_count().satisfies(args.len()) {
-            return Err(err.to_error());
-        }
-
+    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
-            AnyFunction::Function(func) => func.call_unchecked(args),
-            AnyFunction::BuiltinFunction(func) => func.call_unchecked(args),
-            AnyFunction::CurriedFunction(func) => func.call_unchecked(args),
-        }
-    }
-
-    pub fn get_arg_count(&self) -> ArgCount {
-        match self {
-            AnyFunction::Function(func) => func.get_arg_count(),
-            AnyFunction::BuiltinFunction(func) => func.get_arg_count(),
-            AnyFunction::CurriedFunction(func) => func.get_arg_count(),
+            AnyFunction::Function(func) => func.call(args),
+            AnyFunction::BuiltinFunction(func) => func.call(args),
+            AnyFunction::CurriedFunction(func) => func.call(args),
         }
     }
 }
 
 impl FruFunction {
-    pub fn call_unchecked(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         let new_scope = Scope::new_with_parent(self.scope.clone());
 
-        for (ident, value) in self.argument_idents.iter().zip(args.iter()) {
-            new_scope
-                .let_variable(*ident, value.clone())
-                .expect("should NEVER happen XD :)");
-        }
+        self.argument_idents.apply(args, new_scope.clone())?;
 
-        let res = self.body.execute(new_scope);
-        match res {
-            Control::Nah => Ok(FruValue::Nah),
-            Control::Return(v) => Ok(v),
-            Control::Error(e) => Err(e),
-            other => FruError::new_val(format!("unexpected signal {:?}", other)),
+        let signal = self.body.execute(new_scope);
+
+        if let Err(signal) = signal {
+            match signal {
+                Control::Return(v) => Ok(v),
+                Control::Error(e) => Err(e),
+                other => FruError::new_val(format!("unexpected signal {:?}", other)),
+            }
+        } else {
+            Ok(FruValue::Nah)
         }
     }
+}
 
-    pub fn get_arg_count(&self) -> ArgCount {
-        ArgCount::Exact(self.argument_idents.len())
+impl FormalParameters {
+    // scope is the scope of function being called
+    pub fn apply(&self, evaluated: EvaluatedArgumentList, scope: Rc<Scope>) -> Result<(), FruError> {
+        let mut next_positional = 0;
+
+        let acceptable: HashSet<_> = self.args.iter()
+                                         .map(|(x, _)| *x).collect();
+
+        for (ident, value) in evaluated.args {
+            let ident = match ident {
+                Some(ident) => {
+                    if !acceptable.contains(&ident) {
+                        return Err(ArgumentError::DoesNotExist { ident }.into());
+                    }
+                    ident
+                }
+                None => {
+                    if next_positional >= self.args.len() {
+                        return Err(ArgumentError::TooMany.into());
+                    }
+                    let r = self.args[next_positional].0;
+                    next_positional += 1;
+                    r
+                }
+            };
+
+            scope.let_variable(ident, value).map_err(|_| ArgumentError::SameSetTwice { ident }.into())?;
+        }
+
+        for (ident, value) in self.args.iter().skip(next_positional) {
+            if scope.has_variable(*ident) {
+                continue;
+            }
+
+            if let Some(default) = value {
+                let default = match default.evaluate(scope.clone()) {
+                    Ok(v) => v,
+
+                    Err(Control::Error(err)) => return Err(err),
+
+                    Err(unexpected) => return FruError::new_unit(
+                        format!("unexpected signal {:?}", unexpected)
+                    ),
+                };
+
+                scope.let_variable(*ident, default)?;
+            } else {
+                return Err(ArgumentError::NotSetPositional { ident: *ident }.into());
+            }
+        }
+
+        Ok(())
     }
 }
 
 impl BuiltinFunction {
-    pub fn call_unchecked(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         (self.function)(args)
-    }
-
-    pub fn get_arg_count(&self) -> ArgCount {
-        self.argument_count
     }
 }
 
 impl CurriedFunction {
-    pub fn call_unchecked(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         let mut new_args = self.saved_args.clone();
-        new_args.extend(args);
+        new_args.args.extend(args.args);
 
         match *self.function {
-            AnyFunction::Function(ref func) => func.call_unchecked(new_args),
-            AnyFunction::BuiltinFunction(ref func) => func.call_unchecked(new_args),
+            AnyFunction::Function(ref func) => func.call(new_args),
+            AnyFunction::BuiltinFunction(ref func) => func.call(new_args),
             AnyFunction::CurriedFunction(_) => {
                 unreachable!("CurriedFunction should never contain a CurriedFunction")
             }
         }
     }
+}
 
-    pub fn get_arg_count(&self) -> ArgCount {
-        let internal = match *self.function {
-            AnyFunction::Function(ref func) => func.get_arg_count(),
-            AnyFunction::BuiltinFunction(ref func) => func.get_arg_count(),
-            _ => unreachable!("CurriedFunction should never contain a CurriedFunction"),
-        };
-
-        internal - self.saved_args.len()
+impl Into<FruError> for ArgumentError {
+    fn into(self) -> FruError {
+        FruError::new(
+            format!("{:?}", self)
+        )
     }
 }
 
-impl Debug for ArgCountError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            ArgCountError::TooManyArgs { expected, got } => {
-                write!(
-                    f,
-                    "too many arguments, expected {:?}, got {}",
-                    expected, got
-                )
-            }
-
-            ArgCountError::TooFewArgs { expected, got } => {
-                write!(f, "too few arguments, expected {:?}, got {}", expected, got)
-            }
-        }
-    }
-}
-
-impl Debug for FruFunction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Function")
-    }
-}
 
 impl Debug for AnyFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -208,9 +190,8 @@ impl Debug for AnyFunction {
             AnyFunction::CurriedFunction(func) => {
                 write!(
                     f,
-                    "CurriedFunction({}/{:?})",
-                    func.saved_args.len(),
-                    func.function.get_arg_count()
+                    "CurriedFunction({})",
+                    func.saved_args.args.len(),
                 )
             }
         }

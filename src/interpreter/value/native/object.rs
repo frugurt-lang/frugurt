@@ -1,21 +1,27 @@
 use std::rc::Rc;
 
-use crate::interpreter::{error::FruError, identifier::Identifier, value::fru_value::FruValue};
+use crate::interpreter::{
+    error::FruError,
+    identifier::Identifier,
+    value::fru_value::FruValue,
+    value::function::EvaluatedArgumentList,
+};
+
 
 pub trait INativeObject {
     fn get_type_identifier(&self) -> Identifier {
         Identifier::for_native_object()
     }
 
-    fn call(&self, _args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    fn call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         FruError::new_val(format!("cannot call {}", self.get_type_identifier()))
     }
 
-    fn curry_call(&self, _args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    fn curry_call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         FruError::new_val(format!("cannot curry call {}", self.get_type_identifier()))
     }
 
-    fn instantiate(&self, _args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    fn instantiate(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         FruError::new_val(format!("cannot instantiate {}", self.get_type_identifier()))
     }
 
@@ -48,15 +54,15 @@ impl NativeObject {
         self.internal.get_type_identifier()
     }
 
-    pub fn call(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         self.internal.call(args)
     }
 
-    pub fn curry_call(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn curry_call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         self.internal.curry_call(args)
     }
 
-    pub fn instantiate(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
+    pub fn instantiate(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         self.internal.instantiate(args)
     }
 

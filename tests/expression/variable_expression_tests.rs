@@ -1,5 +1,6 @@
 use crate::tests::run;
 
+
 #[test]
 fn test_block() {
     run(r#"
@@ -74,10 +75,27 @@ fn test_function2() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "variable `a` does not exist")]
 fn test_function3() {
     run(r#"
             let f = fn () { a = 7; };
             f();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "variable `a` already exist")]
+fn test_double_let() {
+    run(r#"
+            let a = 1;
+            let a = 2;
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "variable `a` does not exist")]
+fn test_not_exist() {
+    run(r#"
+            print(a);
         "#)
 }

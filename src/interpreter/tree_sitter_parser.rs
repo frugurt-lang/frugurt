@@ -17,6 +17,7 @@ use crate::interpreter::{
     value::fru_type::FruField,
     value::fru_type::TypeType,
     value::fru_value::FruValue,
+    value::function::{ArgumentList, FormalParameters},
 };
 
 #[derive(Error, Debug)]
@@ -80,7 +81,7 @@ pub enum ParseError {
 }
 
 enum TypeExtension {
-    Impl(Vec<(bool, Identifier, Vec<Identifier>, Rc<FruStatement>)>),
+    Impl(Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>),
     Constraints(Vec<(Vec<Identifier>, Rc<FruStatement>)>),
 }
 
@@ -192,7 +193,7 @@ fn search_for_errors(ast: Node) -> ParseError {
     let mut cur = ast.walk();
 
     loop {
-        if cur.node().is_error() {
+        if cur.node().is_error() || cur.node().is_missing() {
             return ParseError::ParsingError {
                 position: cur.node().range(),
             };
@@ -260,15 +261,32 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
 
         "continue_statement" => FruStatement::Continue,
 
-        "operator_statement" => FruStatement::Operator {
-            ident: ast.get_child_ident("ident")?,
-            commutative: ast.get_child("commutative").is_ok(),
-            left_ident: ast.get_child_ident("left_ident")?,
-            left_type_ident: ast.get_child_ident("left_type_ident")?,
-            right_ident: ast.get_child_ident("right_ident")?,
-            right_type_ident: ast.get_child_ident("right_type_ident")?,
-            body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
-        },
+        "operator_statement" => {
+            let commutative = ast.get_child("commutative").is_ok();
+
+            let left_type_ident = ast.get_child_ident("left_type_ident")?;
+            let right_type_ident = ast.get_child_ident("right_type_ident")?;
+
+            if commutative && left_type_ident == right_type_ident {
+                return Err(ParseError::Error {
+                    position: ast.get_child("commutative")?.range(),
+                    error: format!(
+                        "commutative operators must have different types, but {} was used twice",
+                        left_type_ident
+                    ),
+                });
+            }
+
+            FruStatement::Operator {
+                ident: ast.get_child_ident("ident")?,
+                commutative,
+                left_ident: ast.get_child_ident("left_ident")?,
+                left_type_ident,
+                right_ident: ast.get_child_ident("right_ident")?,
+                right_type_ident,
+                body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
+            }
+        }
 
         "type_statement" => {
             let type_type = match ast.get_child_text("type_type")? {
@@ -294,19 +312,13 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             }
 
             let mut methods = Vec::new();
-            let mut static_methods = Vec::new();
+
             let mut watches = Vec::new();
 
             for extension in ast.parse_children("extensions", parse_extension)? {
                 match extension {
                     TypeExtension::Impl(xs) => {
-                        for x in xs {
-                            if x.0 {
-                                static_methods.push((x.1, x.2, x.3));
-                            } else {
-                                methods.push((x.1, x.2, x.3));
-                            }
-                        }
+                        methods.extend(xs);
                     }
                     TypeExtension::Constraints(x) => watches.extend(x),
                 }
@@ -319,7 +331,6 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 static_fields,
                 watches,
                 methods,
-                static_methods,
             }
         }
 
@@ -389,7 +400,7 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
 
         "instantiation_expression" => FruExpression::Instantiation {
             what: ast.parse_child_expression("what")?.wrap_box(),
-            args: ast.parse_child("args", parse_argument_list)?,
+            args: ast.parse_child("args", parse_argument_list_instantiation)?,
         },
 
         "field_access_expression" => FruExpression::FieldAccess {
@@ -480,7 +491,7 @@ fn parse_extension(ast: NodeWrapper) -> Result<TypeExtension, ParseError> {
     })
 }
 
-fn parse_method(ast: NodeWrapper) -> Result<(bool, Identifier, Vec<Identifier>, Rc<FruStatement>), ParseError> {
+fn parse_method(ast: NodeWrapper) -> Result<(bool, Identifier, FormalParameters, Rc<FruStatement>), ParseError> {
     let is_static = ast.get_child("static").is_ok();
 
     let ident = ast.get_child_ident("ident")?;
@@ -500,13 +511,112 @@ fn parse_watch(ast: NodeWrapper) -> Result<(Vec<Identifier>, Rc<FruStatement>), 
     Ok((args, body))
 }
 
-fn parse_formal_parameters(ast: NodeWrapper) -> Result<Vec<Identifier>, ParseError> {
-    ast.parse_children("args", NodeWrapper::ident)
+fn parse_formal_parameters(ast: NodeWrapper) -> Result<FormalParameters, ParseError> {
+    let args = ast.parse_children("args", parse_formal_parameter)?;
+
+    let mut was_default = false;
+    let mut minimum_args = 0;
+
+    for i in 0..args.len() {
+        if args[i].1.is_some() {
+            was_default = true;
+        } else if was_default {
+            return Err(ParseError::Error {
+                position: ast.parse_children("args", Ok)?[i].range(),
+                error: "Positional parameters should be before default parameters".to_string(),
+            });
+        } else {
+            minimum_args += 1;
+        }
+    }
+
+    Ok(FormalParameters {
+        args,
+        minimum_args,
+    })
 }
 
-fn parse_argument_list(ast: NodeWrapper) -> Result<Vec<FruExpression>, ParseError> {
-    ast.parse_children("args",
-                       |x|
-                           x.parse_child_expression("value"),
-    )
+fn parse_formal_parameter(x: NodeWrapper) -> Result<(Identifier, Option<FruExpression>), ParseError> {
+    match x.grammar_name() {
+        "positional_parameter" => {
+            Ok((
+                x.get_child_ident("ident")?,
+                None
+            ))
+        }
+
+        "default_parameter" => {
+            Ok((
+                x.get_child_ident("ident")?,
+                Some(x.parse_child_expression("value")?),
+            ))
+        }
+        unexpected => Err(ParseError::InvalidAst {
+            position: x.range(),
+            error: format!("Not a formal parameter: {}", unexpected),
+        })
+    }
+}
+
+fn parse_argument_list(ast: NodeWrapper) -> Result<ArgumentList, ParseError> {
+    let args = ast.parse_children("args", parse_argument_item)?;
+
+    let mut was_named = false;
+
+    for i in 0..args.len() {
+        if args[i].0.is_some() {
+            was_named = true;
+        } else if was_named {
+            return Err(ParseError::Error {
+                position: ast.parse_children("args", Ok)?[i].range(),
+                error: "Positional arguments should be before named arguments".to_string(),
+            });
+        }
+    }
+
+    Ok(ArgumentList { args })
+}
+
+fn parse_argument_list_instantiation(ast: NodeWrapper) -> Result<ArgumentList, ParseError> {
+    let args = parse_argument_list(ast)?;
+
+    if args.args.len() == 0 {
+        return Ok(args);
+    }
+
+    let named = args.args[0].0.is_some();
+
+    for (i, _) in &args.args {
+        if i.is_some() != named {
+            return Err(ParseError::Error {
+                position: ast.range(),
+                error: "All arguments must be either named or not named at the same time".to_string(),
+            });
+        }
+    }
+
+    Ok(args)
+}
+
+fn parse_argument_item(ast: NodeWrapper) -> Result<(Option<Identifier>, FruExpression), ParseError> {
+    match ast.grammar_name() {
+        "positional_argument" => {
+            Ok((
+                None,
+                ast.parse_child_expression("value")?
+            ))
+        }
+
+        "named_argument" => {
+            Ok((
+                Some(ast.get_child_ident("ident")?),
+                ast.parse_child_expression("value")?
+            ))
+        }
+
+        unexpected => return Err(ParseError::InvalidAst {
+            position: ast.range(),
+            error: format!("Not an argument: {}", unexpected),
+        })
+    }
 }

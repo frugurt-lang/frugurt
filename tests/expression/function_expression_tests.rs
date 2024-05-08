@@ -1,7 +1,8 @@
 use crate::tests::run;
 
+
 #[test]
-fn test_function1() {
+fn test_function() {
     run(r#"
             let func = fn (x, y) {
                 return x + y + {x * y};
@@ -51,18 +52,23 @@ fn test_function_nested() {
     "#)
 }
 
+
 #[test]
-fn test_curry() {
+fn test_named_eval() {
     run(r#"
-            let f = fn (a, b, c) {a + b + c};
-            
-            let g = f$(1);
-            
-            assert_eq(g(2, 3), 6);
-            
-            assert_eq(f(1, 2, 3), 6);
-            
-            assert_eq(g$(2)(5), 8);
+            let f = fn (a = 1, b = a + 2) {2 * a + b};
+
+            assert_eq(f(), 5);
+            assert_eq(f(b: 7), 9);
+        "#)
+}
+
+#[test]
+fn test_named_eval_2() {
+    run(r#"
+            let f = fn (a, b = 5 / a) {2 * a + b};
+
+           assert_eq(f(1), 7);
         "#)
 }
 
@@ -80,3 +86,57 @@ fn test_overall() {
             assert_eq(g(1)(2), 3);
         "#)
 }
+
+#[test]
+fn test_named() {
+    run(r#"
+            let f = fn (a = 1, b = 2) {2 * a + b};
+
+            assert_eq(f(), 4);
+            assert_eq(f(3), 8);
+            assert_eq(f(3, 4), 10);
+            assert_eq(f(b: 3, a: 4), 11);
+            assert_eq(f(b: 6), 8);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Continue")]
+fn test_unexpected_signal_1() {
+    run(r#"
+            fn () {continue;}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Break")]
+fn test_unexpected_signal_2() {
+    run(r#"
+            fn () {break;}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Continue")]
+fn test_unexpected_signal_default_1() {
+    run(r#"
+            fn (a={continue; 1}) {}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Break")]
+fn test_unexpected_signal_default_2() {
+    run(r#"
+            fn (a={break; 1}) {}();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "unexpected signal Return")]
+fn test_unexpected_signal_default_3() {
+    run(r#"
+            fn (a={return 1; 1}) {}();
+        "#)
+}
+

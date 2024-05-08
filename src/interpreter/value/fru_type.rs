@@ -7,7 +7,7 @@ use crate::interpreter::{
     value::fru_object::FruObject,
     value::fru_value::FruValue,
     value::fru_watch::FruWatch,
-    value::function::{AnyFunction, FruFunction},
+    value::function::{AnyFunction, EvaluatedArgumentList, FruFunction},
 };
 
 #[derive(Clone)]
@@ -105,7 +105,7 @@ impl FruType {
             ))));
         }
 
-        FruError::new_val(format!("static field or method {} not found", ident))
+        FruError::new_val(format!("static field or method `{}` not found", ident))
     }
 
     pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
@@ -113,19 +113,40 @@ impl FruType {
             *field = value;
             Ok(())
         } else {
-            FruError::new_unit(format!("static field {} not found", ident))
+            FruError::new_unit(format!("static field `{}` not found", ident))
         }
     }
 
-    pub fn instantiate(&self, args: Vec<FruValue>) -> Result<FruValue, FruError> {
-        if args.len() != self.internal.fields.len() {
-            return FruError::new_val(format!(
-                "expected {} fields, got {}",
-                self.internal.fields.len(),
-                args.len()
-            ));
-        } // todo fire watches
+    pub fn instantiate(&self, mut args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
+        let mut obj_fields = HashMap::new();
 
+        let fields = self.get_fields();
+
+        for (n, (ident, value)) in args.args.drain(..).enumerate() {
+            let ident = match ident {
+                Some(ident) => ident,
+                None => fields[n].ident,
+            };
+            if obj_fields.contains_key(&ident) {
+                return FruError::new_val(format!("field `{}` is set more than once", ident));
+            }
+            obj_fields.insert(ident, value);
+        }
+
+        let mut args = Vec::new();
+
+        for FruField { ident, .. } in fields {
+            match obj_fields.remove(ident) {
+                Some(value) => args.push(value),
+                None => return FruError::new_val(format!("missing field `{}`", ident)),
+            }
+        }
+
+        if let Some(ident) = obj_fields.keys().next() {
+            return FruError::new_val(format!("field `{}` does not exist", *ident));
+        }
+
+        // TODO: fire watches
         Ok(FruObject::new_object(self.clone(), args))
     }
 }

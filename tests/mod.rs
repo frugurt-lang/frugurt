@@ -1,15 +1,18 @@
-mod expression_tests;
-mod function_tests;
-mod oop_tests;
-mod operators_tests;
-mod scoping_tests;
-mod value_tests;
+mod builtin;
+mod expression;
+mod literal_expression;
+mod oop;
+mod statement;
 
-use crate::execute_file;
+use std::io::Write;
 
 use tempfile::NamedTempFile;
 
-use std::io::Write;
+use crate::interpreter::{
+    runner::execute_file,
+    identifier,
+};
+
 
 pub fn run(code: &str) {
     let mut file = NamedTempFile::new().expect("failed to create temporary file");
@@ -17,6 +20,8 @@ pub fn run(code: &str) {
     file.write_all(code.as_bytes())
         .expect("failed to write to temporary file");
     file.flush().unwrap();
+
+    identifier::reset_poison();
 
     execute_file(file.path()).unwrap();
 }
