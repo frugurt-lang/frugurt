@@ -60,7 +60,15 @@ fn test_return() {
 
 #[test]
 #[should_panic(expected = "division by zero")]
-fn test_error() {
+fn test_error_propagation_1() {
+    run(r#"
+            while 1 / 0 {}
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_2() {
     run(r#"
             let a = 0;
             while true {

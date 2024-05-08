@@ -15,3 +15,15 @@ let five = add3$(2);
 
 print(five()); // 5
 ```
+
+You can apply arguments not in order using named arguments.
+
+```frugurt
+let combine = fn(a, b, c) {
+    a + 2 * b + 3 * c
+};
+
+let g = combine$(a: 2, c: 3);
+
+print(g(b: 1)); // 13
+```

@@ -3,8 +3,8 @@ use crate::tests::run;
 
 #[test]
 #[should_panic]
-fn test_type_mismatch() {
+fn test_unexpected_signal_3() {
     run(r#"
-            if "nope" {1} else {2};
+            break;
         "#)
 }

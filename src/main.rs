@@ -2,14 +2,14 @@
 #![feature(iterator_try_collect)]
 #![feature(linked_list_cursors)]
 
+mod helpers;
+mod interpreter;
+
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 
-pub use crate::interpreter::runner::execute_file;
-
-mod helpers;
-mod interpreter;
+use crate::interpreter::runner::execute_file;
 
 #[cfg(test)]
 #[path = "../tests/mod.rs"]

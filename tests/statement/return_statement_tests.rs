@@ -8,3 +8,11 @@ fn test_() {
             return 1 / 0;
         "#)
 }
+
+#[test]
+#[should_panic]
+fn test_unexpected_signal_1() {
+    run(r#"
+            return;
+        "#)
+}
