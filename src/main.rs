@@ -29,11 +29,15 @@ fn main() {
 
     let result = execute_file(args.filename.as_path());
 
-    if let Err(err) = result {
-        println!("{}", err);
+    if let Err(err) = &result {
+        eprintln!("{}", err);
     }
 
     if args.time {
         println!("Program finished in {}ms", start.elapsed().as_millis());
+    }
+    
+    if result.is_err() {
+        std::process::exit(1);
     }
 }

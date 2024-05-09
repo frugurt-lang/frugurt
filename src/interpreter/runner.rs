@@ -7,7 +7,7 @@ pub fn execute_file(path: &Path) -> Result<Rc<Scope>, FruError> {
 
     let ast = match tree_sitter_parser::parse(source_code) {
         Ok(ast) => ast,
-        Err(e) => return Err(FruError::new(format!("{}", e)))
+        Err(err) => return Err(FruError::new(err.to_string()))
     };
 
     let global_scope = Scope::new_global();

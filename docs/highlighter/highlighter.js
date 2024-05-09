@@ -30,7 +30,6 @@ window.TreeSitter.init().then(async () => {
     }
 });
 
-
 /** @param {string} str
  @param {{from: number, to: number, color: string}[]} ranges */
 function colorString(str, ranges) {

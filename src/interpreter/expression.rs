@@ -156,7 +156,7 @@ impl FruExpression {
                     }
 
                     unexpected => Control::new_err(format!(
-                        "Expected bool in if condition, got {}",
+                        "Expected `Bool` in if condition, got `{}`",
                         unexpected.get_type_identifier()
                     )),
                 }

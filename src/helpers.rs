@@ -7,7 +7,6 @@ macro_rules! rc_refcell {
     };
 }
 
-
 pub trait WrappingExtension {
     fn wrap_box(self) -> Box<Self>;
 

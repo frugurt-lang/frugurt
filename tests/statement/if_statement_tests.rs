@@ -1,8 +1,7 @@
 use crate::tests::run;
 
-
 #[test]
-#[should_panic(expected = "Expected bool in if condition, got Number")]
+#[should_panic(expected = "Expected `Bool` in if condition, got `Number`")]
 fn test_type_mismatch() {
     run(r#"
             if 1 {}

@@ -58,7 +58,7 @@ impl FruObject {
             return if let Some(getter) = property.getter {
                 returned(getter.evaluate(new_scope))
             } else {
-                FruError::new_res(format!("property {} has no getter", ident))
+                FruError::new_res(format!("property `{}` has no getter", ident))
             };
         }
 
@@ -78,7 +78,7 @@ impl FruObject {
             return Ok(static_thing);
         }
 
-        FruError::new_res(format!("field or method {} not found", ident))
+        FruError::new_res(format!("prop `{}` not found", ident))
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
@@ -104,7 +104,7 @@ impl FruObject {
                     Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
                 }
             } else {
-                FruError::new_res(format!("property {} has no setter", ident))
+                FruError::new_res(format!("property `{}` has no setter", ident))
             };
         }
 
@@ -113,7 +113,7 @@ impl FruObject {
         }
 
         FruError::new_res(format!(
-            "prop {} does not exist in struct {}",
+            "prop `{}` does not exist in struct `{}`",
             ident,
             self.get_type().get_ident()
         ))

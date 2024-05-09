@@ -268,7 +268,7 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 return Err(ParseError::Error {
                     position: ast.get_child("commutative")?.range(),
                     error: format!(
-                        "commutative operators must have different types, but {} was used twice",
+                        "commutative operators must have different types, but `{}` was used twice",
                         left_type_ident
                     ),
                 });
@@ -313,7 +313,7 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                             return Err(ParseError::Error {
                                 position: ast.get_child("members")?.range(),
                                 error: format!(
-                                    "Duplicate property: {}",
+                                    "Duplicate property: `{}`",
                                     p.ident
                                 ),
                             });
@@ -369,9 +369,9 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
                     value: FruValue::String(s)
                 },
 
-                Err(e) => return Err(ParseError::InvalidAst {
+                Err(err) => return Err(ParseError::InvalidAst {
                     position: ast.range(),
-                    error: e.to_string(),
+                    error: err.to_string(),
                 })
             }
         }
@@ -433,6 +433,15 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
     Ok(result_expression)
 }
 
+fn parse_maybe_typed_ident(ast: NodeWrapper) -> Result<(Identifier, Option<Identifier>), ParseError> {
+    debug_assert_eq!(ast.grammar_name(), "maybe_typed_identifier"); // TODO: add them everywhere
+
+    let ident = ast.get_child_ident("ident")?;
+    let type_ident = ast.parse_optional_child("type_ident", |x| x.ident())?;
+
+    Ok((ident, type_ident))
+}
+
 fn parse_function_body(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
     Ok(match ast.grammar_name() {
         "block_statement" => parse_statement(ast)?,
@@ -462,8 +471,7 @@ fn parse_type_member(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
 fn parse_field(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
     let is_public = ast.get_child("pub").is_ok();
     let is_static = ast.get_child("static").is_ok();
-    let ident = ast.get_child_ident("ident")?;
-    let type_ident = ast.parse_optional_child("type_ident", NodeWrapper::ident)?;
+    let (ident, type_ident) = ast.parse_child("ident", parse_maybe_typed_ident)?;
 
     let value = ast.parse_optional_child("value", parse_expression)?;
 

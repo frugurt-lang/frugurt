@@ -1,13 +1,11 @@
 use crate::tests::run;
 
-
 #[test]
 fn test_basic() {
     run(r#"
             assert_eq("assert_eq", "assert_eq");
         "#)
 }
-
 
 #[test]
 #[should_panic(expected = "assertion failed: 1 != 2")]

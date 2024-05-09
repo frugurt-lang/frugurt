@@ -1,6 +1,5 @@
 use crate::tests::run;
 
-
 #[test]
 #[should_panic(expected = "DoesNotExist")]
 fn test_named_error_1() {

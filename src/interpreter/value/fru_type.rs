@@ -124,7 +124,7 @@ impl FruType {
             );
         }
 
-        FruError::new_res(format!("static field or method `{}` not found", ident))
+        FruError::new_res(format!("static prop `{}` not found", ident))
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
@@ -132,7 +132,7 @@ impl FruType {
             *field = value;
             Ok(())
         } else {
-            FruError::new_res(format!("static field `{}` not found", ident))
+            FruError::new_res(format!("static prop `{}` not found", ident))
         }
     }
 

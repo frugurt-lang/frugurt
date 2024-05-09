@@ -14,7 +14,6 @@ window.highlighterInfo = {
 "while" @keyword
 "impl" @keyword
 
-
 (number_literal) @number
 (string_literal) @string
 (bool_literal) @bool

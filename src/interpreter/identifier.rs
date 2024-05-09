@@ -40,8 +40,7 @@ impl Identifier {
         ident.hash(&mut hasher);
 
         let hashed_ident = hasher.finish();
-
-
+        
         BACKWARDS_MAP.lock().unwrap()
                      .entry(hashed_ident)
                      .or_insert_with(|| ident.to_string());

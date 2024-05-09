@@ -13,7 +13,6 @@ use crate::interpreter::{
     identifier,
 };
 
-
 pub fn run(code: &str) {
     let mut file = NamedTempFile::new().expect("failed to create temporary file");
 

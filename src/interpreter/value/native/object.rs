@@ -13,27 +13,27 @@ pub trait INativeObject {
     }
 
     fn call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_res(format!("cannot call {}", self.get_type_identifier()))
+        FruError::new_res(format!("`{}` is not invokable ", self.get_type_identifier()))
     }
 
     fn curry_call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_res(format!("cannot curry call {}", self.get_type_identifier()))
+        FruError::new_res(format!("`{}` is not invokable", self.get_type_identifier()))
     }
 
     fn instantiate(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_res(format!("cannot instantiate {}", self.get_type_identifier()))
+        FruError::new_res(format!("`{}` is not instantiatable", self.get_type_identifier()))
     }
 
     fn get_prop(&self, _ident: Identifier) -> Result<FruValue, FruError> {
         FruError::new_res(format!(
-            "cannot access prop of {}",
+            "cannot access prop of `{}`",
             self.get_type_identifier()
         ))
     }
 
     fn set_prop(&self, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
         FruError::new_res(format!(
-            "cannot set prop of {}",
+            "cannot set prop of `{}`",
             self.get_type_identifier()
         ))
     }

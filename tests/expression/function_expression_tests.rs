@@ -1,6 +1,5 @@
 use crate::tests::run;
 
-
 #[test]
 fn test_function() {
     run(r#"
@@ -51,7 +50,6 @@ fn test_function_nested() {
             assert_eq(comp(6), 42);
     "#)
 }
-
 
 #[test]
 fn test_named_eval_1() {

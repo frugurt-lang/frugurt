@@ -1,6 +1,5 @@
 use crate::tests::run;
 
-
 #[test]
 fn test_basics() {
     run(r#"

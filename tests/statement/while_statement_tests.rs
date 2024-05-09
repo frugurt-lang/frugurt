@@ -1,8 +1,7 @@
 use crate::tests::run;
 
-
 #[test]
-#[should_panic(expected = "unexpected value with type String in while condition")]
+#[should_panic(expected = "Expected `Bool` in while condition, got `String`")]
 fn test_unexpected() {
     run(r#"
             while "true" {}

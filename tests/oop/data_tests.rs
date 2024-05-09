@@ -1,6 +1,5 @@
 use crate::tests::run;
 
-
 #[test]
 #[should_panic(expected = "cannot set field `f` in 'data' type `Number`")]
 fn test_data() {

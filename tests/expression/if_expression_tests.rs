@@ -1,6 +1,5 @@
 use crate::tests::run;
 
-
 #[test]
 fn test_if_else() {
     run(r#"
@@ -16,7 +15,7 @@ fn test_if_else() {
 }
 
 #[test]
-#[should_panic(expected = "Expected bool in if condition, got String")]
+#[should_panic(expected = "Expected `Bool` in if condition, got `String`")]
 fn test_type_mismatch() {
     run(r#"
             if "nope" {

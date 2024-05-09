@@ -131,7 +131,7 @@ impl FruStatement {
                     }
 
                     _ => return Control::new_err(format!(
-                        "Expected bool in if condition, got {}",
+                        "Expected `Bool` in if condition, got `{}`",
                         result.get_type_identifier()
                     )),
                 }
@@ -146,9 +146,8 @@ impl FruStatement {
                         FruValue::Bool(b) => b,
                         other => {
                             return Control::new_err(format!(
-                                "unexpected value with type {:?} in while condition: {:?}",
-                                other.get_type_identifier(),
-                                other
+                                "Expected `Bool` in while condition, got `{}`",
+                                other.get_type_identifier()
                             ));
                         }
                     }
@@ -234,8 +233,7 @@ impl FruStatement {
                         methods_.insert(*ident, mt);
                     }
                 }
-
-
+                
                 let mut static_fields_evaluated = HashMap::new();
                 for (field, value) in static_fields {
                     let value = if let Some(v) = value {
@@ -246,8 +244,7 @@ impl FruStatement {
 
                     static_fields_evaluated.insert(field.ident, value);
                 }
-
-
+                
                 scope.let_variable(*ident, FruType::new_value(
                     *ident,
                     *type_type,

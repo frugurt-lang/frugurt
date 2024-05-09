@@ -47,7 +47,7 @@ impl FruValue {
         match self {
             FruValue::Function(fun) => fun.call(args),
             FruValue::NativeObject(obj) => obj.call(args),
-            _ => FruError::new_res(format!("{:?} is not invokable", self.get_type_identifier())),
+            _ => FruError::new_res(format!("`{}` is not invokable", self.get_type_identifier())),
         }
     }
 
@@ -80,7 +80,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.curry_call(args),
 
-            _ => FruError::new_res(format!("{:?} is not invokable", self.get_type_identifier())),
+            _ => FruError::new_res(format!("`{}` is not invokable", self.get_type_identifier())),
         }
     }
 
@@ -90,7 +90,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.instantiate(args),
 
-            _ => FruError::new_res(format!("cannot instantiate {}", self.get_type_identifier())),
+            _ => FruError::new_res(format!("`{}` is not instantiatable", self.get_type_identifier())),
         }
     }
 
@@ -103,7 +103,7 @@ impl FruValue {
             FruValue::NativeObject(obj) => obj.get_prop(ident),
 
             _ => FruError::new_res(format!(
-                "cannot access prop of {}",
+                "cannot access prop of `{}`",
                 self.get_type_identifier()
             )),
         }
@@ -118,7 +118,7 @@ impl FruValue {
             FruValue::NativeObject(obj) => obj.set_prop(ident, value),
 
             _ => FruError::new_res(format!(
-                "cannot set prop of {}",
+                "cannot set prop of `{}`",
                 self.get_type_identifier()
             )),
         }
