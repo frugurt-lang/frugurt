@@ -7,6 +7,8 @@ fn test_basics() {
         let b = false;
         assert_eq(a, true);
         assert_eq(b, false);
+        
+        print(true);
         "#);
 }
 

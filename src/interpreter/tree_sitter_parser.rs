@@ -496,7 +496,7 @@ fn parse_maybe_typed_ident(
 fn parse_function_body(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
     Ok(match ast.grammar_name() {
         "block_statement" => parse_statement(ast)?,
-        
+
         "block_expression" => {
             FruStatement::Return {
                 value: Some(parse_expression(ast)?.wrap_box()),
@@ -515,7 +515,7 @@ fn parse_function_body(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
 fn parse_type_member(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
     match ast.grammar_name() {
         "type_field" => parse_field(ast),
-        
+
         "type_property" => parse_property(ast),
 
         unexpected => {
@@ -557,7 +557,7 @@ fn parse_field(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
 fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
     enum Item<'a> {
         Get(Rc<FruExpression>, NodeWrapper<'a>),
-        Set(Rc<FruStatement>, NodeWrapper<'a>),
+        Set((Identifier, Rc<FruStatement>), NodeWrapper<'a>),
     }
 
     // TODO: add static and public modifiers
@@ -566,8 +566,18 @@ fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
     let items = ast.parse_children("items", |x| {
         Ok(match x.get_child_text("type")? {
             "get" => Item::Get(x.parse_child_expression("body")?.wrap_rc(), x),
-            
-            "set" => Item::Set(x.parse_child_statement("body")?.wrap_rc(), x),
+
+            "set" => {
+                let ident = x.parse_optional_child("value_ident", parse_maybe_typed_ident)?;
+
+                Item::Set(
+                    (
+                        ident.map_or_else(|| Identifier::new("value"), |x| x.0),
+                        x.parse_child_statement("body")?.wrap_rc(),
+                    ),
+                    x,
+                )
+            }
 
             unexpected => {
                 return Err(ParseError::InvalidAst {

@@ -98,8 +98,10 @@ impl FruObject {
         }
 
         if let Some(property) = self.get_type().get_property(ident) {
-            return if let Some(setter) = property.setter {
+            return if let Some((ident, setter)) = property.setter {
                 let new_scope = Scope::new_with_object(self.clone());
+
+                new_scope.let_variable(ident, value)?;
 
                 match setter.execute(new_scope) {
                     Ok(()) => Ok(()),

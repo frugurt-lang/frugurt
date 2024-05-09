@@ -87,3 +87,11 @@ fn test_count_error_2() {
             f(1);
         "#)
 }
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation() {
+    run(r#"
+            (1 / 0)();
+        "#)
+}

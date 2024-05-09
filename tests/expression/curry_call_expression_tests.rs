@@ -25,3 +25,19 @@ fn test_curry_2() {
             print(g);
         "#)
 }
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_1() {
+    run(r#"
+            (1 / 0)$();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_2() {
+    run(r#"
+            nah$(1 / 0);
+        "#)
+}

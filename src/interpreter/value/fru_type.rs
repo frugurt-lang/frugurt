@@ -40,7 +40,7 @@ pub struct FruField {
 pub struct Property {
     pub ident: Identifier,
     pub getter: Option<Rc<FruExpression>>,
-    pub setter: Option<Rc<FruStatement>>,
+    pub setter: Option<(Identifier, Rc<FruStatement>)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -54,5 +54,8 @@ fn test_vector() {
             assert_eq(Vec2.other, nah);
 
             print(v, v2);
+            
+            v.other = 5;
+            assert_eq(Vec2.other, 5);
         "#)
 }
