@@ -63,15 +63,17 @@ impl FruObject {
         }
 
         if let Some(FruFunction {
-                        argument_idents, body, ..
-                    }) = self.get_type().get_method(ident) {
-            return Ok(
-                FruFunction {
-                    argument_idents,
-                    body,
-                    scope: Scope::new_with_object(self.clone()),
-                }.into(),
-            );
+            argument_idents,
+            body,
+            ..
+        }) = self.get_type().get_method(ident)
+        {
+            return Ok(FruFunction {
+                argument_idents,
+                body,
+                scope: Scope::new_with_object(self.clone()),
+            }
+            .into());
         }
 
         if let Ok(static_thing) = self.get_type().get_prop(ident) {
@@ -84,8 +86,11 @@ impl FruObject {
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if let Some(field_k) = self.get_type().get_field_k(ident) {
             if self.get_type().get_type_type() == TypeType::Data {
-                return FruError::new_res(format!("cannot set field `{}` in 'data' type `{}`",
-                                                 ident, value.get_type_identifier()));
+                return FruError::new_res(format!(
+                    "cannot set field `{}` in 'data' type `{}`",
+                    ident,
+                    value.get_type_identifier()
+                ));
             }
 
             self.set_kth_field(field_k, value);
@@ -101,7 +106,9 @@ impl FruObject {
 
                     Err(Control::Return(FruValue::Nah)) => Ok(()),
 
-                    Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
+                    Err(unexpected) => {
+                        FruError::new_res(format!("unexpected signal {:?}", unexpected))
+                    }
                 }
             } else {
                 FruError::new_res(format!("property `{}` has no setter", ident))
@@ -126,12 +133,7 @@ impl FruObject {
             TypeType::Struct => {
                 FruObject::new_object(
                     self.get_type(),
-                    self.internal
-                        .fields
-                        .borrow()
-                        .iter()
-                        .map(FruValue::fru_clone)
-                        .collect(),
+                    self.internal.fields.borrow().iter().map(FruValue::fru_clone).collect(),
                 )
             }
 

@@ -12,10 +12,10 @@ use crate::interpreter::{
 #[derive(Debug, Clone)]
 pub enum FruExpression {
     Literal {
-        value: FruValue
+        value: FruValue,
     },
     Variable {
-        ident: Identifier
+        ident: Identifier,
     },
     Function {
         args: FormalParameters,
@@ -55,11 +55,13 @@ pub enum FruExpression {
 
 fn eval_args(args: &ArgumentList, scope: Rc<Scope>) -> Result<EvaluatedArgumentList, Control> {
     Ok(EvaluatedArgumentList {
-        args: args.args.iter().map(
-            |(ident, arg)| -> Result<_, Control>{
+        args: args
+            .args
+            .iter()
+            .map(|(ident, arg)| -> Result<_, Control> {
                 Ok((*ident, arg.evaluate(scope.clone())?))
-            }
-        ).try_collect()?
+            })
+            .try_collect()?,
     })
 }
 
@@ -71,13 +73,12 @@ impl FruExpression {
             FruExpression::Variable { ident } => Ok(scope.get_variable(*ident)?),
 
             FruExpression::Function { args, body } => {
-                Ok(
-                    FruFunction {
-                        argument_idents: args.clone(),
-                        body: body.clone(),
-                        scope: scope.clone(),
-                    }.into()
-                )
+                Ok(FruFunction {
+                    argument_idents: args.clone(),
+                    body: body.clone(),
+                    scope: scope.clone(),
+                }
+                .into())
             }
 
             FruExpression::Block { body, expr } => {
@@ -132,11 +133,8 @@ impl FruExpression {
                 let type_left = left_val.get_type_identifier();
                 let type_right = right_val.get_type_identifier();
 
-                let op = scope.get_operator(OperatorIdentifier::new(
-                    *operator,
-                    type_left,
-                    type_right,
-                ))?;
+                let op = scope
+                    .get_operator(OperatorIdentifier::new(*operator, type_left, type_right))?;
 
                 Ok(op.operate(left_val, right_val)?)
             }
@@ -155,10 +153,12 @@ impl FruExpression {
                         }
                     }
 
-                    unexpected => Control::new_err(format!(
-                        "Expected `Bool` in if condition, got `{}`",
-                        unexpected.get_type_identifier()
-                    )),
+                    unexpected => {
+                        Control::new_err(format!(
+                            "Expected `Bool` in if condition, got `{}`",
+                            unexpected.get_type_identifier()
+                        ))
+                    }
                 }
             }
         }

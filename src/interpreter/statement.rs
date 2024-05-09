@@ -7,7 +7,7 @@ use crate::interpreter::{
     scope::Scope,
     value::fru_type::{FruField, FruType, Property, TypeType},
     value::fru_value::FruValue,
-    value::function::{FruFunction, FormalParameters},
+    value::function::{FormalParameters, FruFunction},
     value::operator::AnyOperator,
 };
 
@@ -16,7 +16,7 @@ pub type RawMethods = Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)
 #[derive(Debug, Clone)]
 pub enum FruStatement {
     Block {
-        body: Vec<FruStatement>
+        body: Vec<FruStatement>,
     },
     Expression {
         value: Box<FruExpression>,
@@ -70,9 +70,7 @@ pub enum FruStatement {
 impl FruStatement {
     pub fn execute(&self, scope: Rc<Scope>) -> Result<(), Control> {
         match self {
-            FruStatement::Block {
-                body
-            } => {
+            FruStatement::Block { body } => {
                 let new_scope = Scope::new_with_parent(scope.clone());
 
                 for statement in body {
@@ -80,35 +78,23 @@ impl FruStatement {
                 }
             }
 
-            FruStatement::Expression {
-                value
-            } => {
+            FruStatement::Expression { value } => {
                 value.evaluate(scope.clone())?;
             }
 
-            FruStatement::Let {
-                ident,
-                value
-            } => {
+            FruStatement::Let { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
 
                 scope.let_variable(*ident, v.fru_clone())?;
             }
 
-            FruStatement::Set {
-                ident,
-                value
-            } => {
+            FruStatement::Set { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
 
                 scope.set_variable(*ident, v.fru_clone())?;
             }
 
-            FruStatement::SetProp {
-                what,
-                ident,
-                value,
-            } => {
+            FruStatement::SetProp { what, ident, value } => {
                 let t = what.evaluate(scope.clone())?;
                 let v = value.evaluate(scope.clone())?;
                 t.set_prop(*ident, v.fru_clone())?;
@@ -130,17 +116,16 @@ impl FruStatement {
                         }
                     }
 
-                    _ => return Control::new_err(format!(
-                        "Expected `Bool` in if condition, got `{}`",
-                        result.get_type_identifier()
-                    )),
+                    _ => {
+                        return Control::new_err(format!(
+                            "Expected `Bool` in if condition, got `{}`",
+                            result.get_type_identifier()
+                        ));
+                    }
                 }
             }
 
-            FruStatement::While {
-                condition,
-                body,
-            } => {
+            FruStatement::While { condition, body } => {
                 while {
                     match condition.evaluate(scope.clone())? {
                         FruValue::Bool(b) => b,
@@ -163,15 +148,11 @@ impl FruStatement {
                 }
             }
 
-            FruStatement::Return {
-                value
-            } => {
-                return Err(Control::Return(
-                    match value {
-                        Some(x) => x.evaluate(scope)?,
-                        None => FruValue::Nah
-                    }
-                ));
+            FruStatement::Return { value } => {
+                return Err(Control::Return(match value {
+                    Some(x) => x.evaluate(scope)?,
+                    None => FruValue::Nah,
+                }));
             }
 
             FruStatement::Break => return Err(Control::Break),
@@ -195,7 +176,7 @@ impl FruStatement {
                             body: body.clone(),
                             scope: scope.clone(),
                         }
-                            .clone(),
+                        .clone(),
                     );
                 }
 
@@ -233,7 +214,7 @@ impl FruStatement {
                         methods_.insert(*ident, mt);
                     }
                 }
-                
+
                 let mut static_fields_evaluated = HashMap::new();
                 for (field, value) in static_fields {
                     let value = if let Some(v) = value {
@@ -244,17 +225,20 @@ impl FruStatement {
 
                     static_fields_evaluated.insert(field.ident, value);
                 }
-                
-                scope.let_variable(*ident, FruType::new_value(
+
+                scope.let_variable(
                     *ident,
-                    *type_type,
-                    fields.clone(),
-                    RefCell::new(static_fields_evaluated),
-                    properties.clone(),
-                    methods_,
-                    static_methods_,
-                    scope.clone(),
-                ))?;
+                    FruType::new_value(
+                        *ident,
+                        *type_type,
+                        fields.clone(),
+                        RefCell::new(static_fields_evaluated),
+                        properties.clone(),
+                        methods_,
+                        static_methods_,
+                        scope.clone(),
+                    ),
+                )?;
             }
         }
 

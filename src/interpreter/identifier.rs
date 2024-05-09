@@ -27,9 +27,8 @@ pub struct OperatorIdentifier {
 }
 
 pub fn reset_poison() {
-    match BACKWARDS_MAP.lock() {
-        Ok(_) => {}
-        Err(_) => BACKWARDS_MAP.clear_poison()
+    if BACKWARDS_MAP.lock().is_err() {
+        BACKWARDS_MAP.clear_poison()
     }
 }
 
@@ -40,10 +39,12 @@ impl Identifier {
         ident.hash(&mut hasher);
 
         let hashed_ident = hasher.finish();
-        
-        BACKWARDS_MAP.lock().unwrap()
-                     .entry(hashed_ident)
-                     .or_insert_with(|| ident.to_string());
+
+        BACKWARDS_MAP
+            .lock()
+            .unwrap()
+            .entry(hashed_ident)
+            .or_insert_with(|| ident.to_string());
 
         Self { hashed_ident }
     }
@@ -63,7 +64,10 @@ impl Debug for Identifier {
 
 impl Display for Identifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", BACKWARDS_MAP.lock().unwrap().get(&self.hashed_ident).unwrap()
+        write!(
+            f,
+            "{}",
+            BACKWARDS_MAP.lock().unwrap().get(&self.hashed_ident).unwrap()
         )
     }
 }

@@ -98,10 +98,12 @@ impl Scope {
             Ok(op.clone())
         } else {
             match &self.parent {
-                ScopeAncestor::None => Err(FruError::new(format!(
-                    "operator `{:?}` does not exist",
-                    ident
-                ))),
+                ScopeAncestor::None => {
+                    Err(FruError::new(format!(
+                        "operator `{:?}` does not exist",
+                        ident
+                    )))
+                }
                 ScopeAncestor::Parent(parent)
                 | ScopeAncestor::Object { parent, .. }
                 | ScopeAncestor::Type { parent, .. } => parent.get_operator(ident),
@@ -125,12 +127,12 @@ impl ScopeAncestor {
                 FruError::new_res(format!("variable `{:?}` does not exist", ident))
             }
             ScopeAncestor::Parent(parent) => parent.get_variable(ident),
-            ScopeAncestor::Object { object, parent } => object
-                .get_prop(ident)
-                .or_else(|_| parent.get_variable(ident)),
-            ScopeAncestor::Type { type_, parent } => type_
-                .get_prop(ident)
-                .or_else(|_| parent.get_variable(ident)),
+            ScopeAncestor::Object { object, parent } => {
+                object.get_prop(ident).or_else(|_| parent.get_variable(ident))
+            }
+            ScopeAncestor::Type { type_, parent } => {
+                type_.get_prop(ident).or_else(|_| parent.get_variable(ident))
+            }
         }
     }
 
@@ -142,13 +144,17 @@ impl ScopeAncestor {
 
             ScopeAncestor::Parent(parent) => parent.set_variable(ident, value),
 
-            ScopeAncestor::Object { object, parent } => object
-                .set_prop(ident, value.clone())
-                .or_else(|_| parent.set_variable(ident, value)),
+            ScopeAncestor::Object { object, parent } => {
+                object
+                    .set_prop(ident, value.clone())
+                    .or_else(|_| parent.set_variable(ident, value))
+            }
 
-            ScopeAncestor::Type { type_, parent } => type_
-                .set_prop(ident, value.clone())
-                .or_else(|_| parent.set_variable(ident, value)),
+            ScopeAncestor::Type { type_, parent } => {
+                type_
+                    .set_prop(ident, value.clone())
+                    .or_else(|_| parent.set_variable(ident, value))
+            }
         }
     }
 }

@@ -12,24 +12,16 @@ use crate::interpreter::{
 pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
     HashMap::from(
         [
-            (
-                "print",
-                b_print as TFnBuiltin,
-            ),
-            (
-                "input",
-                b_input as TFnBuiltin,
-            ),
-            (
-                "assert_eq",
-                b_assert_eq as TFnBuiltin,
-            ),
-        ].map(|(ident, function)|
+            ("print", b_print as TFnBuiltin),
+            ("input", b_input as TFnBuiltin),
+            ("assert_eq", b_assert_eq as TFnBuiltin),
+        ]
+        .map(|(ident, function)| {
             (
                 Identifier::new(ident),
-                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction::new(function)))
+                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction::new(function))),
             )
-        )
+        }),
     )
 }
 
@@ -57,6 +49,9 @@ fn b_assert_eq(args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
     if args.args[0].1 == args.args[1].1 {
         Ok(FruValue::Bool(true))
     } else {
-        FruError::new_res(format!("assertion failed: {:?} != {:?}", args.args[0].1, args.args[1].1))
+        FruError::new_res(format!(
+            "assertion failed: {:?} != {:?}",
+            args.args[0].1, args.args[1].1
+        ))
     }
 }

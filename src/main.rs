@@ -1,13 +1,13 @@
 #![feature(iterator_try_collect)]
 
-mod helpers;
-mod interpreter;
-
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 
 use crate::interpreter::runner::execute_file;
+
+mod helpers;
+mod interpreter;
 
 #[cfg(test)]
 #[path = "../tests/mod.rs"]
@@ -36,7 +36,7 @@ fn main() {
     if args.time {
         println!("Program finished in {}ms", start.elapsed().as_millis());
     }
-    
+
     if result.is_err() {
         std::process::exit(1);
     }

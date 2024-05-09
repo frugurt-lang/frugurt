@@ -1,8 +1,4 @@
-use std::{
-    collections::HashSet,
-    fmt::Debug,
-    rc::Rc,
-};
+use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
     control::{returned, returned_unit},
@@ -89,11 +85,14 @@ impl FruFunction {
 
 impl FormalParameters {
     // scope is the scope of function being called
-    pub fn apply(&self, evaluated: EvaluatedArgumentList, scope: Rc<Scope>) -> Result<(), FruError> {
+    pub fn apply(
+        &self,
+        evaluated: EvaluatedArgumentList,
+        scope: Rc<Scope>,
+    ) -> Result<(), FruError> {
         let mut next_positional = 0;
 
-        let acceptable: HashSet<_> = self.args.iter()
-                                         .map(|(x, _)| *x).collect();
+        let acceptable: HashSet<_> = self.args.iter().map(|(x, _)| *x).collect();
 
         for (ident, value) in evaluated.args {
             let ident = match ident {
@@ -113,7 +112,9 @@ impl FormalParameters {
                 }
             };
 
-            scope.let_variable(ident, value).map_err(|_| ArgumentError::SameSetTwice { ident })?;
+            scope
+                .let_variable(ident, value)
+                .map_err(|_| ArgumentError::SameSetTwice { ident })?;
         }
 
         for (ident, value) in self.args.iter().skip(next_positional) {
@@ -164,11 +165,7 @@ impl Debug for AnyFunction {
         match self {
             AnyFunction::Function(_) | AnyFunction::BuiltinFunction(_) => write!(f, "Function"),
             AnyFunction::CurriedFunction(func) => {
-                write!(
-                    f,
-                    "CurriedFunction({})",
-                    func.saved_args.args.len(),
-                )
+                write!(f, "CurriedFunction({})", func.saved_args.args.len(),)
             }
         }
     }

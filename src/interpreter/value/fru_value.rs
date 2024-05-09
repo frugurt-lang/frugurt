@@ -69,12 +69,14 @@ impl FruValue {
                         ))))
                     }
 
-                    normal => Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
-                        CurriedFunction {
-                            saved_args: args,
-                            function: Rc::new(normal.clone()),
-                        },
-                    )))),
+                    normal => {
+                        Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
+                            CurriedFunction {
+                                saved_args: args,
+                                function: Rc::new(normal.clone()),
+                            },
+                        ))))
+                    }
                 }
             }
 
@@ -90,7 +92,12 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.instantiate(args),
 
-            _ => FruError::new_res(format!("`{}` is not instantiatable", self.get_type_identifier())),
+            _ => {
+                FruError::new_res(format!(
+                    "`{}` is not instantiatable",
+                    self.get_type_identifier()
+                ))
+            }
         }
     }
 
@@ -102,10 +109,12 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.get_prop(ident),
 
-            _ => FruError::new_res(format!(
-                "cannot access prop of `{}`",
-                self.get_type_identifier()
-            )),
+            _ => {
+                FruError::new_res(format!(
+                    "cannot access prop of `{}`",
+                    self.get_type_identifier()
+                ))
+            }
         }
     }
 
@@ -117,10 +126,12 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.set_prop(ident, value),
 
-            _ => FruError::new_res(format!(
-                "cannot set prop of `{}`",
-                self.get_type_identifier()
-            )),
+            _ => {
+                FruError::new_res(format!(
+                    "cannot set prop of `{}`",
+                    self.get_type_identifier()
+                ))
+            }
         }
     }
 

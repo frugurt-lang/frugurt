@@ -1,5 +1,6 @@
 // TODO: make use of this
 use thiserror::Error;
+
 use crate::interpreter::value::function::ArgumentError;
 
 #[derive(Debug, Error)]
@@ -14,7 +15,9 @@ impl FruError {
     }
 
     pub fn new_res<T>(message: impl Into<String>) -> Result<T, FruError> {
-        Err(FruError { message: message.into() })
+        Err(FruError {
+            message: message.into(),
+        })
     }
 }
 
