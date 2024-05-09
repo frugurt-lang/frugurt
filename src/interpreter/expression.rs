@@ -2,12 +2,11 @@ use std::rc::Rc;
 
 use crate::interpreter::{
     control::Control,
-    error::FruError,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
     statement::FruStatement,
     value::fru_value::FruValue,
-    value::function::{AnyFunction, FruFunction, ArgumentList, EvaluatedArgumentList, FormalParameters},
+    value::function::{ArgumentList, EvaluatedArgumentList, FormalParameters, FruFunction},
 };
 
 #[derive(Debug, Clone)]
@@ -38,9 +37,9 @@ pub enum FruExpression {
         what: Box<FruExpression>,
         args: ArgumentList,
     },
-    FieldAccess {
+    PropAccess {
         what: Box<FruExpression>,
-        field: Identifier,
+        ident: Identifier,
     },
     Binary {
         operator: Identifier,
@@ -72,13 +71,13 @@ impl FruExpression {
             FruExpression::Variable { ident } => Ok(scope.get_variable(*ident)?),
 
             FruExpression::Function { args, body } => {
-                Ok(FruValue::Function(AnyFunction::Function(
-                    Rc::new(FruFunction {
+                Ok(
+                    FruFunction {
                         argument_idents: args.clone(),
                         body: body.clone(),
                         scope: scope.clone(),
-                    })
-                )))
+                    }.into()
+                )
             }
 
             FruExpression::Block { body, expr } => {
@@ -117,10 +116,10 @@ impl FruExpression {
                 Ok(instantiated.instantiate(args)?)
             }
 
-            FruExpression::FieldAccess { what, field } => {
+            FruExpression::PropAccess { what, ident } => {
                 let what = what.evaluate(scope.clone())?;
 
-                Ok(what.get_field(*field)?)
+                Ok(what.get_prop(*ident)?)
             }
 
             FruExpression::Binary {
@@ -133,11 +132,11 @@ impl FruExpression {
                 let type_left = left_val.get_type_identifier();
                 let type_right = right_val.get_type_identifier();
 
-                let op = scope.get_operator(OperatorIdentifier {
-                    op: *operator,
-                    left: type_left,
-                    right: type_right,
-                })?;
+                let op = scope.get_operator(OperatorIdentifier::new(
+                    *operator,
+                    type_left,
+                    type_right,
+                ))?;
 
                 Ok(op.operate(left_val, right_val)?)
             }
@@ -156,7 +155,7 @@ impl FruExpression {
                         }
                     }
 
-                    unexpected => FruError::new_val_control(format!(
+                    unexpected => Control::new_err(format!(
                         "Expected bool in if condition, got {}",
                         unexpected.get_type_identifier()
                     )),

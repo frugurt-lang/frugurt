@@ -1,7 +1,7 @@
 use std::{fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
-    control::Control,
+    control::returned_unit,
     error::FruError,
     identifier::Identifier,
     scope::Scope,
@@ -30,21 +30,13 @@ impl AnyOperator {
                 scope,
             } => {
                 let new_scope = Scope::new_with_parent(scope.clone());
+
                 new_scope.let_variable(*left_ident, left_val)?;
                 new_scope.let_variable(*right_ident, right_val)?;
 
-                let signal = body.execute(new_scope);
-
-                if let Err(signal) = signal {
-                    match signal {
-                        Control::Return(v) => Ok(v),
-                        Control::Error(e) => Err(e),
-                        other => FruError::new_val(format!("unexpected signal {:?}", other)),
-                    }
-                } else {
-                    Ok(FruValue::Nah)
-                }
+                returned_unit(body.execute(new_scope))
             }
+
             AnyOperator::BuiltinOperator(op) => op(left_val, right_val),
         }
     }

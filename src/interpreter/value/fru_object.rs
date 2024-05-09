@@ -1,13 +1,14 @@
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
+    control::{returned, Control},
     error::FruError,
     identifier::Identifier,
     scope::Scope,
     value::fru_type::FruType,
     value::fru_type::TypeType,
     value::fru_value::FruValue,
-    value::function::{AnyFunction, FruFunction},
+    value::function::FruFunction,
 };
 
 #[derive(Clone)]
@@ -16,8 +17,8 @@ pub struct FruObject {
 }
 
 pub struct FruObjectInternal {
-    pub type_: FruType,
-    pub fields: RefCell<Vec<FruValue>>,
+    type_: FruType,
+    fields: RefCell<Vec<FruValue>>,
 }
 
 impl FruObject {
@@ -38,54 +39,84 @@ impl FruObject {
         self.internal.type_.clone()
     }
 
-    pub fn get_kth_field(&self, i: usize) -> FruValue {
+    fn get_kth_field(&self, i: usize) -> FruValue {
         self.internal.fields.borrow()[i].clone()
     }
 
-    pub fn set_kth_field(&self, i: usize, value: FruValue) {
+    fn set_kth_field(&self, i: usize, value: FruValue) {
         self.internal.fields.borrow_mut()[i] = value
     }
 
-    pub fn get_field(&self, ident: Identifier) -> Result<FruValue, FruError> {
+    pub fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
         if let Some(k) = self.get_type().get_field_k(ident) {
-            Ok(self.get_kth_field(k))
-        } else if let Some(method) = self.get_type().get_method(ident) {
-            Ok(FruValue::Function(AnyFunction::Function(Rc::new(
-                FruFunction {
-                    argument_idents: method.argument_idents,
-                    body: method.body,
-                    scope: Scope::new_with_object_then_parent(self.clone(), method.scope),
-                },
-            ))))
-        } else if let Ok(static_thing) = self.get_type().get_field(ident) {
-            Ok(static_thing)
-        } else {
-            FruError::new_val(format!("field or method {} not found", ident))
+            return Ok(self.get_kth_field(k));
         }
+
+        if let Some(property) = self.get_type().get_property(ident) {
+            let new_scope = Scope::new_with_object(self.clone());
+
+            return if let Some(getter) = property.getter {
+                returned(getter.evaluate(new_scope))
+            } else {
+                FruError::new_res(format!("property {} has no getter", ident))
+            };
+        }
+
+        if let Some(FruFunction {
+                        argument_idents, body, ..
+                    }) = self.get_type().get_method(ident) {
+            return Ok(
+                FruFunction {
+                    argument_idents,
+                    body,
+                    scope: Scope::new_with_object(self.clone()),
+                }.into(),
+            );
+        }
+
+        if let Ok(static_thing) = self.get_type().get_prop(ident) {
+            return Ok(static_thing);
+        }
+
+        FruError::new_res(format!("field or method {} not found", ident))
     }
 
-    pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
-        if self.get_type().get_type_type() == TypeType::Data {
-            return FruError::new_unit(format!("cannot set field `{}` in 'data' type `{}`",
-                                              ident, value.get_type_identifier()));
+    pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
+        if let Some(field_k) = self.get_type().get_field_k(ident) {
+            if self.get_type().get_type_type() == TypeType::Data {
+                return FruError::new_res(format!("cannot set field `{}` in 'data' type `{}`",
+                                                 ident, value.get_type_identifier()));
+            }
+
+            self.set_kth_field(field_k, value);
+            return Ok(());
         }
 
-        let pos = self.get_type().get_field_k(ident);
+        if let Some(property) = self.get_type().get_property(ident) {
+            return if let Some(setter) = property.setter {
+                let new_scope = Scope::new_with_object(self.clone());
 
-        let pos = match pos {
-            Some(p) => p,
-            None => {
-                return FruError::new_unit(format!(
-                    "field {} does not exist in struct {}",
-                    ident,
-                    self.get_type().get_ident()
-                ));
-            }
-        };
+                match setter.execute(new_scope) {
+                    Ok(()) => Ok(()),
 
-        self.set_kth_field(pos, value);
+                    Err(Control::Return(FruValue::Nah)) => Ok(()),
 
-        Ok(())
+                    Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
+                }
+            } else {
+                FruError::new_res(format!("property {} has no setter", ident))
+            };
+        }
+
+        if let Ok(()) = self.get_type().set_prop(ident, value) {
+            return Ok(());
+        }
+
+        FruError::new_res(format!(
+            "prop {} does not exist in struct {}",
+            ident,
+            self.get_type().get_ident()
+        ))
     }
 
     pub fn fru_clone(&self) -> FruValue {
@@ -103,6 +134,7 @@ impl FruObject {
                         .collect(),
                 )
             }
+
             TypeType::Class | TypeType::Data => FruValue::Object(self.clone()),
         }
     }
@@ -113,10 +145,7 @@ impl PartialEq for FruObject {
         if self.get_type() != other.get_type() {
             return false;
         }
-        // TODO: check both ways of comparison
-        // self.internal.fields.borrow().iter().zip(
-        //     other.internal.fields.borrow().iter()
-        // ).map(|(x, y)| x == y).all(identity)
+
         self.internal.fields == other.internal.fields
     }
 }

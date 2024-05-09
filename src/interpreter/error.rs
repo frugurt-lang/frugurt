@@ -1,6 +1,6 @@
-use thiserror::Error; // TODO: make use of this
-
-use crate::interpreter::{control::Control, value::fru_value::FruValue};
+// TODO: make use of this
+use thiserror::Error;
+use crate::interpreter::value::function::ArgumentError;
 
 #[derive(Debug, Error)]
 #[error("{message}")]
@@ -13,25 +13,13 @@ impl FruError {
         FruError { message }
     }
 
-    pub fn new_val(message: String) -> Result<FruValue, FruError> {
-        Err(FruError { message })
+    pub fn new_res<T>(message: impl Into<String>) -> Result<T, FruError> {
+        Err(FruError { message: message.into() })
     }
+}
 
-    pub fn new_val_slice(message: &str) -> Result<FruValue, FruError> {
-        Err(FruError {
-            message: message.to_string(),
-        })
-    }
-
-    pub fn new_unit(message: String) -> Result<(), FruError> {
-        Err(FruError { message })
-    }
-
-    pub fn new_control(message: String) -> Result<(), Control> {
-        Err(Control::Error(FruError { message }))
-    }
-
-    pub fn new_val_control(message: String) -> Result<FruValue, Control> {
-        Err(Control::Error(FruError { message }))
+impl From<ArgumentError> for FruError {
+    fn from(err: ArgumentError) -> Self {
+        FruError::new(format!("{:?}", err))
     }
 }

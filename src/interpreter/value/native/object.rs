@@ -7,34 +7,33 @@ use crate::interpreter::{
     value::function::EvaluatedArgumentList,
 };
 
-
 pub trait INativeObject {
     fn get_type_identifier(&self) -> Identifier {
         Identifier::for_native_object()
     }
 
     fn call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_val(format!("cannot call {}", self.get_type_identifier()))
+        FruError::new_res(format!("cannot call {}", self.get_type_identifier()))
     }
 
     fn curry_call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_val(format!("cannot curry call {}", self.get_type_identifier()))
+        FruError::new_res(format!("cannot curry call {}", self.get_type_identifier()))
     }
 
     fn instantiate(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_val(format!("cannot instantiate {}", self.get_type_identifier()))
+        FruError::new_res(format!("cannot instantiate {}", self.get_type_identifier()))
     }
 
-    fn get_field(&self, _ident: Identifier) -> Result<FruValue, FruError> {
-        FruError::new_val(format!(
-            "cannot get field of {}",
+    fn get_prop(&self, _ident: Identifier) -> Result<FruValue, FruError> {
+        FruError::new_res(format!(
+            "cannot access prop of {}",
             self.get_type_identifier()
         ))
     }
 
-    fn set_field(&self, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
-        FruError::new_unit(format!(
-            "cannot set field of {}",
+    fn set_prop(&self, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
+        FruError::new_res(format!(
+            "cannot set prop of {}",
             self.get_type_identifier()
         ))
     }
@@ -66,12 +65,12 @@ impl NativeObject {
         self.internal.instantiate(args)
     }
 
-    pub fn get_field(&self, ident: Identifier) -> Result<FruValue, FruError> {
-        self.internal.get_field(ident)
+    pub fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
+        self.internal.get_prop(ident)
     }
 
-    pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
-        self.internal.set_field(ident, value)
+    pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
+        self.internal.set_prop(ident, value)
     }
 
     pub fn fru_clone(&self) -> FruValue {

@@ -2,15 +2,16 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::interpreter::{
     control::Control,
-    error::FruError,
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
-    value::fru_type::{FruField, FruType, FruTypeInternal, TypeType},
+    value::fru_type::{FruField, FruType, Property, TypeType},
     value::fru_value::FruValue,
-    value::function::{FormalParameters, FruFunction},
+    value::function::{FruFunction, FormalParameters},
     value::operator::AnyOperator,
 };
+
+pub type RawMethods = Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>;
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
@@ -28,9 +29,9 @@ pub enum FruStatement {
         ident: Identifier,
         value: Box<FruExpression>,
     },
-    SetField {
+    SetProp {
         what: Box<FruExpression>,
-        field: Identifier,
+        ident: Identifier,
         value: Box<FruExpression>,
     },
     If {
@@ -61,14 +62,17 @@ pub enum FruStatement {
         ident: Identifier,
         fields: Vec<FruField>,
         static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
-        methods: Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>,
+        properties: HashMap<Identifier, Property>,
+        methods: RawMethods,
     },
 }
 
 impl FruStatement {
     pub fn execute(&self, scope: Rc<Scope>) -> Result<(), Control> {
         match self {
-            FruStatement::Block { body } => {
+            FruStatement::Block {
+                body
+            } => {
                 let new_scope = Scope::new_with_parent(scope.clone());
 
                 for statement in body {
@@ -76,28 +80,38 @@ impl FruStatement {
                 }
             }
 
-            FruStatement::Expression { value } => {
+            FruStatement::Expression {
+                value
+            } => {
                 value.evaluate(scope.clone())?;
             }
 
-            FruStatement::Let { ident, value } => {
+            FruStatement::Let {
+                ident,
+                value
+            } => {
                 let v = value.evaluate(scope.clone())?;
+
                 scope.let_variable(*ident, v.fru_clone())?;
             }
 
-            FruStatement::Set { ident, value } => {
+            FruStatement::Set {
+                ident,
+                value
+            } => {
                 let v = value.evaluate(scope.clone())?;
+
                 scope.set_variable(*ident, v.fru_clone())?;
             }
 
-            FruStatement::SetField {
+            FruStatement::SetProp {
                 what,
-                field,
+                ident,
                 value,
             } => {
                 let t = what.evaluate(scope.clone())?;
                 let v = value.evaluate(scope.clone())?;
-                t.set_field(*field, v.fru_clone())?;
+                t.set_prop(*ident, v.fru_clone())?;
             }
 
             FruStatement::If {
@@ -107,17 +121,19 @@ impl FruStatement {
             } => {
                 let result = condition.evaluate(scope.clone())?;
 
-                if let FruValue::Bool(b) = result {
-                    if b {
-                        then_body.execute(scope.clone())?;
-                    } else if let Some(ref else_) = else_body {
-                        else_.execute(scope.clone())?;
+                match result {
+                    FruValue::Bool(true) => then_body.execute(scope.clone())?,
+
+                    FruValue::Bool(false) => {
+                        if let Some(else_body) = else_body {
+                            else_body.execute(scope.clone())?
+                        }
                     }
-                } else {
-                    return FruError::new_control(format!(
+
+                    _ => return Control::new_err(format!(
                         "Expected bool in if condition, got {}",
                         result.get_type_identifier()
-                    ));
+                    )),
                 }
             }
 
@@ -129,7 +145,7 @@ impl FruStatement {
                     match condition.evaluate(scope.clone())? {
                         FruValue::Bool(b) => b,
                         other => {
-                            return FruError::new_control(format!(
+                            return Control::new_err(format!(
                                 "unexpected value with type {:?} in while condition: {:?}",
                                 other.get_type_identifier(),
                                 other
@@ -148,7 +164,9 @@ impl FruStatement {
                 }
             }
 
-            FruStatement::Return { value } => {
+            FruStatement::Return {
+                value
+            } => {
                 return Err(Control::Return(
                     match value {
                         Some(x) => x.evaluate(scope)?,
@@ -192,11 +210,13 @@ impl FruStatement {
                     },
                 );
             }
+
             FruStatement::Type {
                 type_type,
                 ident,
                 fields,
                 static_fields,
+                properties,
                 methods,
             } => {
                 let mut methods_ = HashMap::new();
@@ -227,17 +247,17 @@ impl FruStatement {
                     static_fields_evaluated.insert(field.ident, value);
                 }
 
-                let internal = FruTypeInternal {
-                    ident: *ident,
-                    type_type: *type_type,
-                    fields: fields.clone(),
-                    static_fields: RefCell::new(static_fields_evaluated),
-                    methods: methods_,
-                    static_methods: static_methods_,
-                    scope: scope.clone(),
-                };
 
-                scope.let_variable(*ident, FruType::new_value(internal))?;
+                scope.let_variable(*ident, FruType::new_value(
+                    *ident,
+                    *type_type,
+                    fields.clone(),
+                    RefCell::new(static_fields_evaluated),
+                    properties.clone(),
+                    methods_,
+                    static_methods_,
+                    scope.clone(),
+                ))?;
             }
         }
 

@@ -54,7 +54,7 @@ fn test_function_nested() {
 
 
 #[test]
-fn test_named_eval() {
+fn test_named_eval_1() {
     run(r#"
             let f = fn (a = 1, b = a + 2) {2 * a + b};
 
@@ -69,6 +69,13 @@ fn test_named_eval_2() {
             let f = fn (a, b = 5 / a) {2 * a + b};
 
            assert_eq(f(1), 7);
+        "#)
+}
+
+#[test]
+fn test_eval_3() {
+    run(r#"
+            fn (a={return 1; 1}) {}();
         "#)
 }
 
@@ -131,12 +138,3 @@ fn test_unexpected_signal_default_2() {
             fn (a={break; 1}) {}();
         "#)
 }
-
-#[test]
-#[should_panic(expected = "unexpected signal Return")]
-fn test_unexpected_signal_default_3() {
-    run(r#"
-            fn (a={return 1; 1}) {}();
-        "#)
-}
-

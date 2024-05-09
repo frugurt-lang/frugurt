@@ -5,7 +5,7 @@ use crate::interpreter::{
     identifier::Identifier,
     value::fru_object::FruObject,
     value::fru_type::FruType,
-    value::function::{AnyFunction, CurriedFunction, EvaluatedArgumentList},
+    value::function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
     value::native::object::NativeObject,
 };
 
@@ -14,16 +14,16 @@ pub type TOpBuiltin = fn(FruValue, FruValue) -> Result<FruValue, FruError>;
 
 #[derive(Clone)]
 pub enum FruValue {
-    // ---primitives---
+    // primitives
     Nah,
     Number(f64),
     Bool(bool),
     String(String),
 
-    // ---function---
+    // function
     Function(AnyFunction),
 
-    // ---oop---
+    // oop
     Type(FruType),
     Object(FruObject),
     NativeObject(NativeObject),
@@ -37,7 +37,7 @@ impl FruValue {
             FruValue::Bool(_) => Identifier::for_bool(),
             FruValue::String(_) => Identifier::for_string(),
             FruValue::Function(_) => Identifier::for_function(),
-            FruValue::Type(_) => Identifier::for_struct_type(),
+            FruValue::Type(_) => Identifier::for_type(),
             FruValue::Object(obj) => obj.get_type().get_ident(),
             FruValue::NativeObject(obj) => obj.get_type_identifier(),
         }
@@ -47,7 +47,7 @@ impl FruValue {
         match self {
             FruValue::Function(fun) => fun.call(args),
             FruValue::NativeObject(obj) => obj.call(args),
-            _ => FruError::new_val(format!("{:?} is not invokable", self.get_type_identifier())),
+            _ => FruError::new_res(format!("{:?} is not invokable", self.get_type_identifier())),
         }
     }
 
@@ -80,7 +80,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.curry_call(args),
 
-            _ => FruError::new_val(format!("{:?} is not invokable", self.get_type_identifier())),
+            _ => FruError::new_res(format!("{:?} is not invokable", self.get_type_identifier())),
         }
     }
 
@@ -90,35 +90,35 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.instantiate(args),
 
-            _ => FruError::new_val(format!("cannot instantiate {}", self.get_type_identifier())),
+            _ => FruError::new_res(format!("cannot instantiate {}", self.get_type_identifier())),
         }
     }
 
-    pub fn get_field(&self, ident: Identifier) -> Result<FruValue, FruError> {
+    pub fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
         match self {
-            FruValue::Type(ty) => ty.get_field(ident),
+            FruValue::Type(t) => t.get_prop(ident),
 
-            FruValue::Object(obj) => obj.get_field(ident),
+            FruValue::Object(obj) => obj.get_prop(ident),
 
-            FruValue::NativeObject(obj) => obj.get_field(ident),
+            FruValue::NativeObject(obj) => obj.get_prop(ident),
 
-            _ => FruError::new_val(format!(
-                "cannot access field of {}",
+            _ => FruError::new_res(format!(
+                "cannot access prop of {}",
                 self.get_type_identifier()
             )),
         }
     }
 
-    pub fn set_field(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
+    pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         match self {
-            FruValue::Type(ty) => ty.set_field(ident, value),
+            FruValue::Type(t) => t.set_prop(ident, value),
 
-            FruValue::Object(obj) => obj.set_field(ident, value),
+            FruValue::Object(obj) => obj.set_prop(ident, value),
 
-            FruValue::NativeObject(obj) => obj.set_field(ident, value),
+            FruValue::NativeObject(obj) => obj.set_prop(ident, value),
 
-            _ => FruError::new_unit(format!(
-                "cannot access field of {}",
+            _ => FruError::new_res(format!(
+                "cannot set prop of {}",
                 self.get_type_identifier()
             )),
         }
@@ -132,6 +132,12 @@ impl FruValue {
 
             _ => self.clone(),
         }
+    }
+}
+
+impl From<FruFunction> for FruValue {
+    fn from(func: FruFunction) -> Self {
+        FruValue::Function(AnyFunction::Function(Rc::new(func)))
     }
 }
 

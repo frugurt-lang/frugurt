@@ -1,6 +1,4 @@
-#![feature(try_trait_v2)]
 #![feature(iterator_try_collect)]
-#![feature(linked_list_cursors)]
 
 mod helpers;
 mod interpreter;

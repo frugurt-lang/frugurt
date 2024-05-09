@@ -93,7 +93,7 @@ builtin_operator!(num_mul_num, Number, Number, Number, *);
 fn num_div_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::Number(l), FruValue::Number(r)) = (left, right) {
         if r == 0.0 {
-            return FruError::new_val_slice("division by zero");
+            return FruError::new_res("division by zero");
         }
         return Ok(FruValue::Number(l / r));
     }
@@ -104,7 +104,7 @@ fn num_div_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
 fn num_mod_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::Number(l), FruValue::Number(r)) = (left, right) {
         if r == 0.0 {
-            return FruError::new_val_slice("division by zero");
+            return FruError::new_res("division by zero");
         }
         return Ok(FruValue::Number(l.rem_euclid(r)));
     }
@@ -130,7 +130,7 @@ builtin_operator!(num_not_eq_num, Number, Number, Bool, !=);
 builtin_operator!(bool_or_bool, Bool, Bool, Bool, ||);
 builtin_operator!(bool_and_bool, Bool, Bool, Bool, &&);
 
-//string
+// string
 builtin_operator!(string_less_string, String, String, Bool, <);
 builtin_operator!(string_less_eq_string, String, String, Bool, <=);
 builtin_operator!(string_greater_string, String, String, Bool, >);
@@ -148,7 +148,7 @@ fn string_concat(left: FruValue, right: FruValue) -> Result<FruValue, FruError> 
 fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::String(l), FruValue::Number(r)) = (left, right) {
         if r.fract() != 0.0 || r < 0.0 {
-            return FruError::new_val_slice("String * number must be a positive integer");
+            return FruError::new_res("String * number must be a positive integer");
         }
 
         return Ok(FruValue::String(l.repeat(r as usize)));

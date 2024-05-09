@@ -1,11 +1,11 @@
-//FIXME: all of this mess
+// FIXME: all of this mess
 
 use std::{collections::HashMap, io, io::Write};
 
 use crate::interpreter::{
     error::FruError,
     identifier::Identifier,
-    value::fru_value::FruValue,
+    value::fru_value::{FruValue, TFnBuiltin},
     value::function::{AnyFunction, BuiltinFunction, EvaluatedArgumentList},
 };
 
@@ -13,27 +13,25 @@ pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
     HashMap::from(
         [
             (
-                Identifier::new("print"),
-                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction {
-                    function: b_print,
-                })),
+                "print",
+                b_print as TFnBuiltin,
             ),
             (
-                Identifier::new("input"),
-                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction {
-                    function: b_input,
-                })),
+                "input",
+                b_input as TFnBuiltin,
             ),
             (
-                Identifier::new("assert_eq"),
-                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction {
-                    function: b_assert_eq,
-                })),
+                "assert_eq",
+                b_assert_eq as TFnBuiltin,
             ),
-        ] // TODO: rewrite with map
+        ].map(|(ident, function)|
+            (
+                Identifier::new(ident),
+                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction::new(function)))
+            )
+        )
     )
 }
-
 
 fn b_print(args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
     for arg in args.args {
@@ -59,6 +57,6 @@ fn b_assert_eq(args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
     if args.args[0].1 == args.args[1].1 {
         Ok(FruValue::Bool(true))
     } else {
-        FruError::new_val(format!("assertion failed: {:?} != {:?}", args.args[0].1, args.args[1].1))
+        FruError::new_res(format!("assertion failed: {:?} != {:?}", args.args[0].1, args.args[1].1))
     }
 }

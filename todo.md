@@ -26,6 +26,7 @@
 - remove or fix BACKWARDS_MAP in Identifier (fails testing with some probability)
 - introduce a new error type for "method/field not found"
 - automate wasm module for book
+- make set expression, not statement
 
 # Possible improvements
 

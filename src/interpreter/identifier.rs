@@ -21,9 +21,9 @@ pub struct Identifier {
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone, PartialOrd, Ord)]
 pub struct OperatorIdentifier {
-    pub op: Identifier,
-    pub left: Identifier,
-    pub right: Identifier,
+    op: Identifier,
+    left: Identifier,
+    right: Identifier,
 }
 
 pub fn reset_poison() {
@@ -36,16 +36,17 @@ pub fn reset_poison() {
 impl Identifier {
     pub fn new(ident: &str) -> Self {
         let mut hasher = DefaultHasher::new();
+
         ident.hash(&mut hasher);
-        let hash = hasher.finish();
+
+        let hashed_ident = hasher.finish();
 
 
         BACKWARDS_MAP.lock().unwrap()
-                     .entry(hash)
+                     .entry(hashed_ident)
                      .or_insert_with(|| ident.to_string());
 
-
-        Self { hashed_ident: hash }
+        Self { hashed_ident }
     }
 }
 
@@ -96,8 +97,8 @@ impl Identifier {
         Self::new("Function")
     }
 
-    pub fn for_struct_type() -> Self {
-        Self::new("StructType")
+    pub fn for_type() -> Self {
+        Self::new("Type")
     }
 
     pub fn for_native_object() -> Self {
