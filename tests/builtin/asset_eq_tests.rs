@@ -1,5 +1,4 @@
-use crate::tests::run;
-
+use crate::run;
 
 #[test]
 fn test_basic() {
@@ -7,7 +6,6 @@ fn test_basic() {
             assert_eq("assert_eq", "assert_eq");
         "#)
 }
-
 
 #[test]
 #[should_panic(expected = "assertion failed: 1 != 2")]

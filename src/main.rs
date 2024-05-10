@@ -1,19 +1,12 @@
-#![feature(try_trait_v2)]
 #![feature(iterator_try_collect)]
-#![feature(linked_list_cursors)]
-
-mod helpers;
-mod interpreter;
 
 use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 
-use crate::interpreter::runner::execute_file;
+use crate::interpreter::execute_file;
 
-#[cfg(test)]
-#[path = "../tests/mod.rs"]
-mod tests;
+mod interpreter;
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -31,11 +24,15 @@ fn main() {
 
     let result = execute_file(args.filename.as_path());
 
-    if let Err(err) = result {
-        println!("{}", err);
+    if let Err(err) = &result {
+        eprintln!("{}", err);
     }
 
     if args.time {
         println!("Program finished in {}ms", start.elapsed().as_millis());
+    }
+
+    if result.is_err() {
+        std::process::exit(1);
     }
 }

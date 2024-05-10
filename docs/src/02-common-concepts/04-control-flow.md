@@ -2,8 +2,6 @@
 
 The control flow in Frugurt can be implemented using both statements and expressions.
 
-
-
 ## Conditionals
 
 ### using statements
@@ -18,7 +16,6 @@ if age < 12 {
     print("adult");
 }
 ```
-
 
 ### using expressions
 ```frugurt

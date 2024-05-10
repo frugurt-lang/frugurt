@@ -1,5 +1,4 @@
-use crate::tests::run;
-
+use crate::run;
 
 #[test]
 fn test_curry_1() {
@@ -24,5 +23,21 @@ fn test_curry_2() {
             let g = print$(1);
             g(2);
             print(g);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_1() {
+    run(r#"
+            (1 / 0)$();
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation_2() {
+    run(r#"
+            nah$(1 / 0);
         "#)
 }

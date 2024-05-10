@@ -1,17 +1,13 @@
-use std::{
-    fmt::Debug,
-    rc::Rc,
-    collections::HashSet,
-};
+use std::{collections::HashSet, fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
-    control::Control,
+    control::{returned, returned_unit},
     error::FruError,
+    expression::FruExpression,
     identifier::Identifier,
     scope::Scope,
     statement::FruStatement,
     value::fru_value::{FruValue, TFnBuiltin},
-    expression::FruExpression,
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -45,7 +41,6 @@ pub struct FruFunction {
 #[derive(Clone, Debug)]
 pub struct FormalParameters {
     pub args: Vec<(Identifier, Option<FruExpression>)>,
-    pub minimum_args: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -60,7 +55,7 @@ pub struct EvaluatedArgumentList {
 
 #[derive(Clone)]
 pub struct BuiltinFunction {
-    pub function: TFnBuiltin,
+    function: TFnBuiltin,
 }
 
 pub struct CurriedFunction {
@@ -79,32 +74,25 @@ impl AnyFunction {
 }
 
 impl FruFunction {
-    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
+    fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         let new_scope = Scope::new_with_parent(self.scope.clone());
 
         self.argument_idents.apply(args, new_scope.clone())?;
 
-        let signal = self.body.execute(new_scope);
-
-        if let Err(signal) = signal {
-            match signal {
-                Control::Return(v) => Ok(v),
-                Control::Error(e) => Err(e),
-                other => FruError::new_val(format!("unexpected signal {:?}", other)),
-            }
-        } else {
-            Ok(FruValue::Nah)
-        }
+        returned_unit(self.body.execute(new_scope))
     }
 }
 
 impl FormalParameters {
     // scope is the scope of function being called
-    pub fn apply(&self, evaluated: EvaluatedArgumentList, scope: Rc<Scope>) -> Result<(), FruError> {
+    pub fn apply(
+        &self,
+        evaluated: EvaluatedArgumentList,
+        scope: Rc<Scope>,
+    ) -> Result<(), FruError> {
         let mut next_positional = 0;
 
-        let acceptable: HashSet<_> = self.args.iter()
-                                         .map(|(x, _)| *x).collect();
+        let acceptable: HashSet<_> = self.args.iter().map(|(x, _)| *x).collect();
 
         for (ident, value) in evaluated.args {
             let ident = match ident {
@@ -124,7 +112,9 @@ impl FormalParameters {
                 }
             };
 
-            scope.let_variable(ident, value).map_err(|_| ArgumentError::SameSetTwice { ident }.into())?;
+            scope
+                .let_variable(ident, value)
+                .map_err(|_| ArgumentError::SameSetTwice { ident })?;
         }
 
         for (ident, value) in self.args.iter().skip(next_positional) {
@@ -133,15 +123,7 @@ impl FormalParameters {
             }
 
             if let Some(default) = value {
-                let default = match default.evaluate(scope.clone()) {
-                    Ok(v) => v,
-
-                    Err(Control::Error(err)) => return Err(err),
-
-                    Err(unexpected) => return FruError::new_unit(
-                        format!("unexpected signal {:?}", unexpected)
-                    ),
-                };
+                let default = returned(default.evaluate(scope.clone()))?;
 
                 scope.let_variable(*ident, default)?;
             } else {
@@ -154,19 +136,23 @@ impl FormalParameters {
 }
 
 impl BuiltinFunction {
-    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
+    pub fn new(function: TFnBuiltin) -> Self {
+        Self { function }
+    }
+
+    fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         (self.function)(args)
     }
 }
 
 impl CurriedFunction {
-    pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
+    fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         let mut new_args = self.saved_args.clone();
         new_args.args.extend(args.args);
 
-        match *self.function {
-            AnyFunction::Function(ref func) => func.call(new_args),
-            AnyFunction::BuiltinFunction(ref func) => func.call(new_args),
+        match &*self.function {
+            AnyFunction::Function(func) => func.call(new_args),
+            AnyFunction::BuiltinFunction(func) => func.call(new_args),
             AnyFunction::CurriedFunction(_) => {
                 unreachable!("CurriedFunction should never contain a CurriedFunction")
             }
@@ -174,25 +160,12 @@ impl CurriedFunction {
     }
 }
 
-impl Into<FruError> for ArgumentError {
-    fn into(self) -> FruError {
-        FruError::new(
-            format!("{:?}", self)
-        )
-    }
-}
-
-
 impl Debug for AnyFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AnyFunction::Function(_) | AnyFunction::BuiltinFunction(_) => write!(f, "Function"),
             AnyFunction::CurriedFunction(func) => {
-                write!(
-                    f,
-                    "CurriedFunction({})",
-                    func.saved_args.args.len(),
-                )
+                write!(f, "CurriedFunction({})", func.saved_args.args.len(),)
             }
         }
     }

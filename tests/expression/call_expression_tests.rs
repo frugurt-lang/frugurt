@@ -1,5 +1,4 @@
-use crate::tests::run;
-
+use crate::run;
 
 #[test]
 #[should_panic(expected = "DoesNotExist")]
@@ -42,7 +41,7 @@ fn test_named_error_4() {
 }
 
 #[test]
-#[should_panic(expected = "Positional parameters should be before default parameters")]
+#[should_panic(expected = "Positional parameter `b` should be before default parameters")]
 fn test_named_error_5() {
     run(r#"
             fn (a = 1, b) {2 * a + b};
@@ -86,5 +85,13 @@ fn test_count_error_2() {
             let f = fn (a, b) {};
 
             f(1);
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "division by zero")]
+fn test_error_propagation() {
+    run(r#"
+            (1 / 0)();
         "#)
 }

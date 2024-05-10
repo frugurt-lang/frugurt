@@ -1,5 +1,4 @@
-use crate::tests::run;
-
+use crate::run;
 
 #[test]
 #[should_panic(expected = "division by zero")]
@@ -55,5 +54,8 @@ fn test_vector() {
             assert_eq(Vec2.other, nah);
 
             print(v, v2);
+            
+            v.other = 5;
+            assert_eq(Vec2.other, 5);
         "#)
 }

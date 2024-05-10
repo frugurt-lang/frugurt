@@ -7,7 +7,6 @@ macro_rules! rc_refcell {
     };
 }
 
-
 pub trait WrappingExtension {
     fn wrap_box(self) -> Box<Self>;
 
@@ -15,7 +14,9 @@ pub trait WrappingExtension {
 }
 
 impl<T> WrappingExtension for T
-    where T: 'static + Sized {
+where
+    T: 'static + Sized,
+{
     fn wrap_box(self) -> Box<Self> {
         Box::new(self)
     }

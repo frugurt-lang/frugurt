@@ -1,5 +1,4 @@
-use crate::tests::run;
-
+use crate::run;
 
 #[test]
 fn test_block() {

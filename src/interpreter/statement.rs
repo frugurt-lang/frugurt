@@ -2,21 +2,21 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::interpreter::{
     control::Control,
-    error::FruError,
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
-    value::fru_type::{FruField, FruType, FruTypeInternal, TypeType},
+    value::fru_type::{FruField, FruType, Property, TypeType},
     value::fru_value::FruValue,
-    value::fru_watch::FruWatch,
     value::function::{FormalParameters, FruFunction},
     value::operator::AnyOperator,
 };
 
+pub type RawMethods = Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>;
+
 #[derive(Debug, Clone)]
 pub enum FruStatement {
     Block {
-        body: Vec<FruStatement>
+        body: Vec<FruStatement>,
     },
     Expression {
         value: Box<FruExpression>,
@@ -29,9 +29,9 @@ pub enum FruStatement {
         ident: Identifier,
         value: Box<FruExpression>,
     },
-    SetField {
+    SetProp {
         what: Box<FruExpression>,
-        field: Identifier,
+        ident: Identifier,
         value: Box<FruExpression>,
     },
     If {
@@ -62,8 +62,9 @@ pub enum FruStatement {
         ident: Identifier,
         fields: Vec<FruField>,
         static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
-        watches: Vec<(Vec<Identifier>, Rc<FruStatement>)>,
-        methods: Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>,
+        properties: HashMap<Identifier, Property>,
+        static_properties: HashMap<Identifier, Property>,
+        methods: RawMethods,
     },
 }
 
@@ -84,22 +85,20 @@ impl FruStatement {
 
             FruStatement::Let { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
+
                 scope.let_variable(*ident, v.fru_clone())?;
             }
 
             FruStatement::Set { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
+
                 scope.set_variable(*ident, v.fru_clone())?;
             }
 
-            FruStatement::SetField {
-                what,
-                field,
-                value,
-            } => {
+            FruStatement::SetProp { what, ident, value } => {
                 let t = what.evaluate(scope.clone())?;
                 let v = value.evaluate(scope.clone())?;
-                t.set_field(*field, v.fru_clone())?;
+                t.set_prop(*ident, v.fru_clone())?;
             }
 
             FruStatement::If {
@@ -109,32 +108,32 @@ impl FruStatement {
             } => {
                 let result = condition.evaluate(scope.clone())?;
 
-                if let FruValue::Bool(b) = result {
-                    if b {
-                        then_body.execute(scope.clone())?;
-                    } else if let Some(ref else_) = else_body {
-                        else_.execute(scope.clone())?;
+                match result {
+                    FruValue::Bool(true) => then_body.execute(scope.clone())?,
+
+                    FruValue::Bool(false) => {
+                        if let Some(else_body) = else_body {
+                            else_body.execute(scope.clone())?
+                        }
                     }
-                } else {
-                    return FruError::new_control(format!(
-                        "Expected bool in if condition, got {}",
-                        result.get_type_identifier()
-                    ));
+
+                    _ => {
+                        return Control::new_err(format!(
+                            "Expected `Bool` in if condition, got `{}`",
+                            result.get_type_identifier()
+                        ));
+                    }
                 }
             }
 
-            FruStatement::While {
-                condition,
-                body,
-            } => {
+            FruStatement::While { condition, body } => {
                 while {
                     match condition.evaluate(scope.clone())? {
                         FruValue::Bool(b) => b,
                         other => {
-                            return FruError::new_control(format!(
-                                "unexpected value with type {:?} in while condition: {:?}",
-                                other.get_type_identifier(),
-                                other
+                            return Control::new_err(format!(
+                                "Expected `Bool` in while condition, got `{}`",
+                                other.get_type_identifier()
                             ));
                         }
                     }
@@ -151,12 +150,10 @@ impl FruStatement {
             }
 
             FruStatement::Return { value } => {
-                return Err(Control::Return(
-                    match value {
-                        Some(x) => x.evaluate(scope)?,
-                        None => FruValue::Nah
-                    }
-                ));
+                return Err(Control::Return(match value {
+                    Some(x) => x.evaluate(scope)?,
+                    None => FruValue::Nah,
+                }));
             }
 
             FruStatement::Break => return Err(Control::Break),
@@ -180,7 +177,7 @@ impl FruStatement {
                             body: body.clone(),
                             scope: scope.clone(),
                         }
-                            .clone(),
+                        .clone(),
                     );
                 }
 
@@ -194,12 +191,14 @@ impl FruStatement {
                     },
                 );
             }
+
             FruStatement::Type {
                 type_type,
                 ident,
                 fields,
                 static_fields,
-                watches,
+                properties,
+                static_properties,
                 methods,
             } => {
                 let mut methods_ = HashMap::new();
@@ -218,7 +217,6 @@ impl FruStatement {
                     }
                 }
 
-
                 let mut static_fields_evaluated = HashMap::new();
                 for (field, value) in static_fields {
                     let value = if let Some(v) = value {
@@ -230,37 +228,20 @@ impl FruStatement {
                     static_fields_evaluated.insert(field.ident, value);
                 }
 
-                let raw_watches: Vec<(Vec<Identifier>, FruWatch)> = watches
-                    .iter()
-                    .map(|(idents, body)| (idents.clone(), (FruWatch { body: body.clone() })))
-                    .collect();
-
-                let watches = raw_watches.iter().map(|(_, x)| x.clone()).collect();
-
-                let mut watches_by_field: HashMap<_, Vec<FruWatch>> = HashMap::new();
-
-                for (idents, watch) in raw_watches {
-                    for ident in idents {
-                        watches_by_field
-                            .entry(ident)
-                            .or_default()
-                            .push(watch.clone());
-                    }
-                }
-
-                let internal = FruTypeInternal {
-                    ident: *ident,
-                    type_type: *type_type,
-                    fields: fields.clone(),
-                    static_fields: RefCell::new(static_fields_evaluated),
-                    watches_by_field,
-                    watches,
-                    methods: methods_,
-                    static_methods: static_methods_,
-                    scope: scope.clone(),
-                };
-
-                scope.let_variable(*ident, FruType::new_value(internal))?;
+                scope.let_variable(
+                    *ident,
+                    FruType::new_value(
+                        *ident,
+                        *type_type,
+                        fields.clone(),
+                        RefCell::new(static_fields_evaluated),
+                        properties.clone(),
+                        static_properties.clone(),
+                        methods_,
+                        static_methods_,
+                        scope.clone(),
+                    ),
+                )?;
             }
         }
 

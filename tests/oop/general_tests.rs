@@ -1,5 +1,4 @@
-use crate::tests::run;
-
+use crate::run;
 
 #[test]
 fn test_scope() {
@@ -59,6 +58,8 @@ fn test_operators() {
             assert_eq(5 * v1 * 2, Vec2 :{ 10, 20 });
             
             assert_eq(6 +-*/%=<>&|^!? 9, 54);
+            
+            print(Vec2);
         "#)
 }
 

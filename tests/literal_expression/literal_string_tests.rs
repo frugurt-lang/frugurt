@@ -1,6 +1,6 @@
-use crate::tests::run;
-//TODO: add more escaping tests
+use crate::run;
 
+// TODO: add more escaping tests
 
 #[test]
 fn test_basics() {

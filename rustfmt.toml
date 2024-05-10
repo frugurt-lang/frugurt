@@ -1,0 +1,5 @@
+imports_layout = "HorizontalVertical"
+force_multiline_blocks = true
+overflow_delimited_expr = true
+struct_variant_width = 0
+chain_width = 80

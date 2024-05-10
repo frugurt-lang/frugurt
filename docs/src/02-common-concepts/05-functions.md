@@ -56,7 +56,7 @@ print(f(5, 10)); // 15
 print(f(y: 10, x: 5)); // 15
 ```
 
-Named parameters can be computed using positional ones and other named parameters, that go before them.
+Named parameters can be computed using positional ones and other named parameters that go before them.
 
 ```frugurt
 let f = fn (x, y=x + 5, z=x + y + 5) {
