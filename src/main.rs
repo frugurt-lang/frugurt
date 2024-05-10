@@ -6,7 +6,7 @@ use clap::Parser;
 
 use crate::interpreter::execute_file;
 
-pub mod interpreter;
+mod interpreter;
 
 #[derive(Parser, Debug)]
 struct Args {

@@ -139,5 +139,9 @@ fn test_static_basics() {
             T.Foo = 3;
             
             assert_eq(T.Foo, 3);
+            
+            let t = T :{};
+            
+            assert_eq(t.Foo, 3);
         "#)
 }

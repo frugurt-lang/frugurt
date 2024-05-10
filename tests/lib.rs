@@ -7,7 +7,7 @@ use tempfile::NamedTempFile;
 use crate::interpreter::{execute_file, reset_poison};
 
 #[path = "../src/interpreter/mod.rs"]
-pub mod interpreter;
+mod interpreter;
 
 mod builtin;
 mod expression;
@@ -23,5 +23,7 @@ pub fn run(code: &str) {
 
     reset_poison();
 
-    execute_file(file.path()).unwrap();
+    if let Err(err) = execute_file(file.path()) {
+        panic!("{}", err)
+    }
 }
