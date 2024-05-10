@@ -1,7 +1,7 @@
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
-    control::{returned, Control},
+    control::{returned, returned_nothing},
     error::FruError,
     identifier::Identifier,
     scope::Scope,
@@ -55,10 +55,10 @@ impl FruObject {
         if let Some(property) = self.get_type().get_property(ident) {
             let new_scope = Scope::new_with_object(self.clone());
 
-            return if let Some(getter) = property.getter {
-                returned(getter.evaluate(new_scope))
-            } else {
-                FruError::new_res(format!("property `{}` has no getter", ident))
+            return match property.getter {
+                Some(getter) => returned(getter.evaluate(new_scope)),
+
+                None => FruError::new_res(format!("property `{}` has no getter", ident)),
             };
         }
 
@@ -103,15 +103,7 @@ impl FruObject {
 
                 new_scope.let_variable(ident, value)?;
 
-                match setter.execute(new_scope) {
-                    Ok(()) => Ok(()),
-
-                    Err(Control::Return(FruValue::Nah)) => Ok(()),
-
-                    Err(unexpected) => {
-                        FruError::new_res(format!("unexpected signal {:?}", unexpected))
-                    }
-                }
+                returned_nothing(setter.execute(new_scope))
             } else {
                 FruError::new_res(format!("property `{}` has no setter", ident))
             };

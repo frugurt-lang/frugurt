@@ -1,4 +1,4 @@
-use crate::tests::run;
+use crate::run;
 
 #[test]
 #[should_panic(expected = "Expected `Bool` in while condition, got `String`")]

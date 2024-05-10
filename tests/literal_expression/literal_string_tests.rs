@@ -1,4 +1,4 @@
-use crate::tests::run;
+use crate::run;
 
 // TODO: add more escaping tests
 

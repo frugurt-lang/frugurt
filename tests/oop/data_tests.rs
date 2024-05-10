@@ -1,4 +1,4 @@
-use crate::tests::run;
+use crate::run;
 
 #[test]
 #[should_panic(expected = "cannot set field `f` in 'data' type `Number`")]

@@ -1,8 +1,10 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
+    control::{returned, returned_nothing},
     error::FruError,
     expression::FruExpression,
+    helpers::WrappingExtension,
     identifier::Identifier,
     scope::Scope,
     statement::FruStatement,
@@ -24,6 +26,7 @@ pub struct FruTypeInternal {
     static_fields: RefCell<HashMap<Identifier, FruValue>>,
     // TODO: change for FruField?
     properties: HashMap<Identifier, Property>,
+    static_properties: HashMap<Identifier, Property>,
     methods: HashMap<Identifier, FruFunction>,
     static_methods: HashMap<Identifier, FruFunction>,
     scope: Rc<Scope>,
@@ -40,7 +43,7 @@ pub struct FruField {
 pub struct Property {
     pub ident: Identifier,
     pub getter: Option<Rc<FruExpression>>,
-    pub setter: Option<(Identifier, Rc<FruStatement>)>,
+    pub setter: Option<(Identifier, Rc<FruStatement>)>, // ident for value variable
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,12 +60,13 @@ impl FruType {
         fields: Vec<FruField>,
         static_fields: RefCell<HashMap<Identifier, FruValue>>,
         properties: HashMap<Identifier, Property>,
+        static_properties: HashMap<Identifier, Property>,
         methods: HashMap<Identifier, FruFunction>,
         static_methods: HashMap<Identifier, FruFunction>,
         scope: Rc<Scope>,
     ) -> FruValue {
         FruValue::Type(Self {
-            internal: Rc::new(FruTypeInternal {
+            internal: FruTypeInternal {
                 ident,
                 type_type,
                 fields,
@@ -70,8 +74,10 @@ impl FruType {
                 properties,
                 methods,
                 static_methods,
+                static_properties,
                 scope,
-            }),
+            }
+            .wrap_rc(),
         })
     }
 
@@ -114,6 +120,16 @@ impl FruType {
             return Ok(field.clone());
         }
 
+        if let Some(property) = self.internal.static_properties.get(&ident) {
+            let new_scope = Scope::new_with_type(self.clone());
+
+            return match &property.getter {
+                Some(getter) => returned(getter.evaluate(new_scope)),
+
+                None => FruError::new_res(format!("static property `{}` has no getter", ident)),
+            };
+        }
+
         if let Some(static_method) = self.internal.static_methods.get(&ident) {
             return Ok(FruFunction {
                 argument_idents: static_method.argument_idents.clone(),
@@ -129,10 +145,24 @@ impl FruType {
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if let Some(field) = self.internal.static_fields.borrow_mut().get_mut(&ident) {
             *field = value;
-            Ok(())
-        } else {
-            FruError::new_res(format!("static prop `{}` not found", ident))
+            return Ok(());
         }
+
+        if let Some(property) = self.internal.static_properties.get(&ident) {
+            return match &property.setter {
+                Some((ident, setter)) => {
+                    let new_scope = Scope::new_with_type(self.clone());
+
+                    new_scope.let_variable(*ident, value)?;
+
+                    returned_nothing(setter.execute(new_scope))
+                }
+
+                None => FruError::new_res(format!("static property `{}` has no setter", ident)),
+            };
+        }
+
+        FruError::new_res(format!("static prop `{}` not found", ident))
     }
 
     pub fn instantiate(&self, mut args: EvaluatedArgumentList) -> Result<FruValue, FruError> {

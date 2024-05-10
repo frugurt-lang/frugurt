@@ -1,4 +1,4 @@
-use crate::tests::run;
+use crate::run;
 
 #[test]
 fn test_basics() {
@@ -113,5 +113,31 @@ fn test_unexpected_signal() {
             let t = Thing :{};
             
             t.X = 3;
+        "#)
+}
+
+#[test]
+fn test_static_basics() {
+    run(r#"
+            let T = {
+                let inner = 5;
+                
+                struct Thing {
+                    static Foo {
+                        get => inner + 5;
+                        set(val) {
+                            inner = val - 5;  
+                        }
+                    }
+                }
+                
+                Thing
+            };
+            
+            assert_eq(T.Foo, 10);
+            
+            T.Foo = 3;
+            
+            assert_eq(T.Foo, 3);
         "#)
 }

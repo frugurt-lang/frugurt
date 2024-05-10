@@ -4,14 +4,9 @@ use std::{path::PathBuf, time::Instant};
 
 use clap::Parser;
 
-use crate::interpreter::runner::execute_file;
+use crate::interpreter::execute_file;
 
-mod helpers;
-mod interpreter;
-
-#[cfg(test)]
-#[path = "../tests/mod.rs"]
-mod tests;
+pub mod interpreter;
 
 #[derive(Parser, Debug)]
 struct Args {

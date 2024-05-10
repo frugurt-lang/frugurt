@@ -1,8 +1,13 @@
+#![feature(iterator_try_collect)]
+
 use std::io::Write;
 
 use tempfile::NamedTempFile;
 
-use crate::interpreter::{identifier, runner::execute_file};
+use crate::interpreter::{execute_file, reset_poison};
+
+#[path = "../src/interpreter/mod.rs"]
+pub mod interpreter;
 
 mod builtin;
 mod expression;
@@ -16,7 +21,7 @@ pub fn run(code: &str) {
     file.write_all(code.as_bytes()).expect("failed to write to temporary file");
     file.flush().unwrap();
 
-    identifier::reset_poison();
+    reset_poison();
 
     execute_file(file.path()).unwrap();
 }

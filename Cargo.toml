@@ -22,3 +22,8 @@ tempfile = "3.10.1"
 
 [build-dependencies]
 cc = "*"
+
+[[test]]
+name = "integration"
+harness = true
+path = "tests/lib.rs"

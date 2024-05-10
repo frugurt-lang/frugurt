@@ -37,3 +37,12 @@ pub fn returned_unit(x: Result<(), Control>) -> Result<FruValue, FruError> {
         Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
     }
 }
+
+pub fn returned_nothing(x: Result<(), Control>) -> Result<(), FruError> {
+    match x {
+        Ok(()) => Ok(()),
+        Err(Control::Return(FruValue::Nah)) => Ok(()),
+        Err(Control::Error(err)) => Err(err),
+        Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
+    }
+}

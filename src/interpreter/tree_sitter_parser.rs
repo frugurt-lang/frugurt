@@ -1,13 +1,13 @@
-use std::{boxed::Box, collections::HashMap, rc::Rc, str::Utf8Error};
+use std::{boxed::Box, collections::hash_map::Entry, collections::HashMap, rc::Rc, str::Utf8Error};
 
 use snailquote::unescape;
 use thiserror::Error;
 use tree_sitter::{Node, Parser, Range};
 use tree_sitter_frugurt;
 
-use crate::helpers::WrappingExtension;
 use crate::interpreter::{
     expression::FruExpression,
+    helpers::WrappingExtension,
     identifier::Identifier,
     statement::{FruStatement, RawMethods},
     value::fru_type::FruField,
@@ -80,6 +80,7 @@ enum TypeMember {
     NormalField(FruField),
     StaticField((FruField, Option<Box<FruExpression>>)),
     Property(Property),
+    StaticProperty(Property),
 }
 
 #[derive(Clone, Copy)]
@@ -325,6 +326,7 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             let mut fields = Vec::new();
             let mut static_fields = Vec::new();
             let mut properties = HashMap::new();
+            let mut static_properties = HashMap::new();
 
             for member in ast.parse_children("members", parse_type_member)? {
                 match member {
@@ -333,14 +335,33 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                     TypeMember::StaticField(f) => static_fields.push(f),
 
                     TypeMember::Property(p) => {
-                        if properties.contains_key(&p.ident) {
-                            return Err(ParseError::Error {
-                                position: ast.get_child("members")?.range(),
-                                error: format!("Duplicate property: `{}`", p.ident),
-                            });
-                        }
+                        match properties.entry(p.ident) {
+                            Entry::Occupied(_) => {
+                                return Err(ParseError::Error {
+                                    position: ast.get_child("members")?.range(),
+                                    error: format!("Duplicate property: `{}`", p.ident),
+                                });
+                            }
 
-                        properties.insert(p.ident, p);
+                            Entry::Vacant(entry) => {
+                                entry.insert(p);
+                            }
+                        }
+                    }
+
+                    TypeMember::StaticProperty(p) => {
+                        match static_properties.entry(p.ident) {
+                            Entry::Occupied(_) => {
+                                return Err(ParseError::Error {
+                                    position: ast.get_child("members")?.range(),
+                                    error: format!("Duplicate static property: `{}`", p.ident),
+                                });
+                            }
+
+                            Entry::Vacant(entry) => {
+                                entry.insert(p);
+                            }
+                        }
                     }
                 }
             }
@@ -353,6 +374,7 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 fields,
                 static_fields,
                 properties,
+                static_properties,
                 methods,
             }
         }
@@ -563,6 +585,8 @@ fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
     // TODO: add static and public modifiers
     let ident = ast.get_child_ident("ident")?;
 
+    let is_static = ast.get_child("static").is_ok();
+
     let items = ast.parse_children("items", |x| {
         Ok(match x.get_child_text("type")? {
             "get" => Item::Get(x.parse_child_expression("body")?.wrap_rc(), x),
@@ -617,7 +641,11 @@ fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
         }
     }
 
-    Ok(TypeMember::Property(ret))
+    Ok(if is_static {
+        TypeMember::StaticProperty(ret)
+    } else {
+        TypeMember::Property(ret)
+    })
 }
 
 fn parse_impl(ast: NodeWrapper) -> Result<RawMethods, ParseError> {

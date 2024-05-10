@@ -63,6 +63,7 @@ pub enum FruStatement {
         fields: Vec<FruField>,
         static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
         properties: HashMap<Identifier, Property>,
+        static_properties: HashMap<Identifier, Property>,
         methods: RawMethods,
     },
 }
@@ -197,6 +198,7 @@ impl FruStatement {
                 fields,
                 static_fields,
                 properties,
+                static_properties,
                 methods,
             } => {
                 let mut methods_ = HashMap::new();
@@ -234,6 +236,7 @@ impl FruStatement {
                         fields.clone(),
                         RefCell::new(static_fields_evaluated),
                         properties.clone(),
+                        static_properties.clone(),
                         methods_,
                         static_methods_,
                         scope.clone(),
