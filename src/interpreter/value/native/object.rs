@@ -44,17 +44,21 @@ pub trait INativeObject {
         ))
     }
 
-    fn fru_clone(&self) -> FruValue {
-        panic!();
+    fn fru_clone(&self, value: &NativeObject) -> NativeObject {
+        value.clone()
     }
 }
 
 #[derive(Clone)]
 pub struct NativeObject {
-    pub internal: Rc<dyn INativeObject>,
+    internal: Rc<dyn INativeObject>,
 }
 
 impl NativeObject {
+    pub fn new(internal: Rc<dyn INativeObject>) -> Self {
+        Self { internal }
+    }
+
     pub fn get_type_identifier(&self) -> Identifier {
         self.internal.get_type_identifier()
     }
@@ -80,6 +84,6 @@ impl NativeObject {
     }
 
     pub fn fru_clone(&self) -> FruValue {
-        self.internal.fru_clone()
+        FruValue::NativeObject(self.internal.fru_clone(self))
     }
 }

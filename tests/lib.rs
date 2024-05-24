@@ -4,7 +4,7 @@ use std::io::Write;
 
 use tempfile::NamedTempFile;
 
-use crate::interpreter::{execute_file, reset_poison};
+use crate::interpreter::{identifier::reset_poison, runner::execute_file};
 
 #[path = "../src/interpreter/mod.rs"]
 mod interpreter;

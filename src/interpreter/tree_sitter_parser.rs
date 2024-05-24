@@ -217,7 +217,7 @@ fn search_for_errors(ast: Node) -> ParseError {
 fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
     let result_statement = match ast.grammar_name() {
         "source_file" => {
-            FruStatement::Block {
+            FruStatement::SourceCode {
                 body: ast.parse_children("body", parse_statement)?,
             }
         }
@@ -376,6 +376,12 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 properties,
                 static_properties,
                 methods,
+            }
+        }
+
+        "import_statement" => {
+            FruStatement::Import {
+                path: ast.parse_child_expression("path")?.wrap_box(),
             }
         }
 

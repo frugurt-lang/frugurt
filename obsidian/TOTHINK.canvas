@@ -1,0 +1,6 @@
+{
+	"nodes":[
+		{"id":"901340d58aa31311","x":-620,"y":-360,"width":250,"height":130,"type":"text","text":"introduce new wrapper extensions like `wrap_ok`, `wrap_err`, `wrap_value`"}
+	],
+	"edges":[]
+}

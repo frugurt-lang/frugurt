@@ -1,20 +1,26 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
 
 use crate::interpreter::{
     control::Control,
+    error::FruError,
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
+    runner,
     scope::Scope,
     value::fru_type::{FruField, FruType, Property, TypeType},
     value::fru_value::FruValue,
     value::function::{FormalParameters, FruFunction},
     value::operator::AnyOperator,
 };
+use crate::stdlib::scope::fru_scope::FruScope;
 
 pub type RawMethods = Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>;
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
+    SourceCode {
+        body: Vec<FruStatement>,
+    },
     Block {
         body: Vec<FruStatement>,
     },
@@ -66,11 +72,20 @@ pub enum FruStatement {
         static_properties: HashMap<Identifier, Property>,
         methods: RawMethods,
     },
+    Import {
+        path: Box<FruExpression>,
+    },
 }
 
 impl FruStatement {
     pub fn execute(&self, scope: Rc<Scope>) -> Result<(), Control> {
         match self {
+            FruStatement::SourceCode { body } => {
+                for statement in body {
+                    statement.execute(scope.clone())?;
+                }
+            }
+
             FruStatement::Block { body } => {
                 let new_scope = Scope::new_with_parent(scope.clone());
 
@@ -242,6 +257,37 @@ impl FruStatement {
                         scope.clone(),
                     ),
                 )?;
+            }
+
+            FruStatement::Import { path } => {
+                let path = path.evaluate(scope.clone())?;
+
+                let path = match path {
+                    FruValue::String(path) => path,
+
+                    _ => {
+                        return Control::new_err(format!(
+                            "Expected `String` in import path, got `{}`",
+                            path.get_type_identifier()
+                        ));
+                    }
+                };
+
+                let path = PathBuf::from(path);
+
+                let name = path
+                    .file_stem()
+                    .ok_or_else(|| FruError::new(format!("File path \"{:?}\" is not valid", path)))?
+                    .to_str()
+                    .unwrap();
+
+                let result_scope = match runner::execute_file(&path) {
+                    Ok(x) => x,
+
+                    Err(err) => return Err(Control::Error(err)),
+                };
+
+                scope.let_variable(Identifier::new(name), FruScope::new_value(result_scope))?;
             }
         }
 

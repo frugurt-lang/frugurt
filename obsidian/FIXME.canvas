@@ -1,0 +1,13 @@
+{
+	"nodes":[
+		{"id":"813b32f2728a4a94","x":-800,"y":-440,"width":640,"height":820,"type":"group","label":"ordinary"},
+		{"id":"e6b12e213f195739","x":-1420,"y":-440,"width":520,"height":500,"type":"group","label":"critical"},
+		{"id":"02fe9a5b84622932","x":-1400,"y":-414,"width":250,"height":79,"type":"text","text":"`fru_clone()` horror"},
+		{"id":"cd9a0d2eaf046fee","type":"text","text":"implement Display for FruValue and fix for FruObject","x":-740,"y":-409,"width":250,"height":110},
+		{"id":"2dc5ff956d956862","type":"text","text":"introduce a new error type for \"method/field not found\"","x":-740,"y":-275,"width":250,"height":130},
+		{"id":"b18a8755b912d870","type":"text","text":"remove or fix BACKWARDS_MAP in Identifier (fails testing with some probability) !! probably already fixed","x":-740,"y":-100,"width":305,"height":170},
+		{"id":"8b8b22b9de04c759","type":"text","text":"automate wasm module for book","x":-740,"y":120,"width":250,"height":60},
+		{"id":"4cbdbc839acac840","type":"text","text":"make set expression, not statement","x":-740,"y":240,"width":250,"height":60}
+	],
+	"edges":[]
+}
