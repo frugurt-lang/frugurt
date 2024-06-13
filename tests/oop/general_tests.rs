@@ -36,29 +36,29 @@ fn test_operators() {
                 x;
                 y;
             }     
-            
+
             operator + (a : Vec2, b : Vec2) {
                 Vec2 :{ a.x + b.x, a.y + b.y }
             }
-            
+
             commutative operator * (a : Vec2, k : Number) {
                 Vec2 :{ a.x * k, a.y * k }
             }
-            
+
             operator +-*/%=<>&|^!? (a : Number, k : Number) {
                 a * k
             }
-            
+
             let v1 = Vec2 :{ 1, 2 };
             let v2 = Vec2 :{ 3, 4 };
-                        
+
             assert_eq(v1 + v2, Vec2 :{ 4, 6 });
-            
+
             assert_eq(v1 * 2, Vec2 :{ 2, 4 });
             assert_eq(5 * v1 * 2, Vec2 :{ 10, 20 });
-            
+
             assert_eq(6 +-*/%=<>&|^!? 9, 54);
-            
+
             print(Vec2);
         "#)
 }

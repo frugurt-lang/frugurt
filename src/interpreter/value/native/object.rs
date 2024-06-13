@@ -1,13 +1,14 @@
+use std::any::Any;
 use std::rc::Rc;
 
 use crate::interpreter::{
-    error::FruError,
-    identifier::Identifier,
-    value::fru_value::FruValue,
+    error::FruError, identifier::Identifier, value::fru_value::FruValue,
     value::function::EvaluatedArgumentList,
 };
 
 pub trait INativeObject {
+    fn as_any(&self) -> &dyn Any;
+
     fn get_type_identifier(&self) -> Identifier {
         Identifier::for_native_object()
     }
@@ -85,5 +86,9 @@ impl NativeObject {
 
     pub fn fru_clone(&self) -> FruValue {
         FruValue::NativeObject(self.internal.fru_clone(self))
+    }
+
+    pub fn downcast<T: 'static>(&self) -> Option<&T> {
+        self.internal.as_any().downcast_ref::<T>()
     }
 }

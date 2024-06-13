@@ -15,7 +15,7 @@ fn test_error_propagation_2() {
             struct Box {
                 f;
             }
-            
+
             let b = Box :{ 1 / 0 };
         "#)
 }
@@ -27,7 +27,7 @@ fn test_error_propagation_3() {
             struct Box {
                 f;
             }
-            
+
             Box :{ 1, 2 };
         "#)
 }

@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{any::Any, rc::Rc};
 
 use crate::interpreter::{
     error::FruError,
@@ -19,6 +19,10 @@ impl FruScope {
 }
 
 impl INativeObject for FruScope {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     fn get_type_identifier(&self) -> Identifier {
         Identifier::new("Scope")
     }
@@ -28,8 +32,15 @@ impl INativeObject for FruScope {
     }
 
     fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
-        self.scope
-            .set_variable(ident, value.clone())
-            .or_else(|_| self.scope.let_variable(ident, value))
+        self.scope.let_set_variable(ident, value);
+        Ok(())
+    }
+}
+
+pub fn extract_scope_from_value(v: &FruValue) -> Option<Rc<Scope>> {
+    if let FruValue::NativeObject(o) = v {
+        o.downcast::<FruScope>().map(|x| x.scope.clone())
+    } else {
+        None
     }
 }

@@ -1,10 +1,5 @@
 use std::{
-    collections::HashMap,
-    fmt::Debug,
-    fmt::Display,
-    hash::DefaultHasher,
-    hash::Hash,
-    hash::Hasher,
+    collections::HashMap, fmt::Debug, fmt::Display, hash::DefaultHasher, hash::Hash, hash::Hasher,
     sync::Mutex,
 };
 

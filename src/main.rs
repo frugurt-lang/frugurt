@@ -1,5 +1,3 @@
-#![feature(iterator_try_collect)]
-
 use std::{path::PathBuf, time::Instant};
 
 use crate::interpreter::runner::execute_file;

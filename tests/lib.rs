@@ -1,5 +1,3 @@
-#![feature(iterator_try_collect)]
-
 use std::io::Write;
 
 use tempfile::NamedTempFile;
@@ -9,10 +7,14 @@ use crate::interpreter::{identifier::reset_poison, runner::execute_file};
 #[path = "../src/interpreter/mod.rs"]
 mod interpreter;
 
+#[path = "../src/stdlib/mod.rs"]
+mod stdlib;
+
 mod builtin;
 mod expression;
 mod literal_expression;
 mod oop;
+mod scope_manipulation;
 mod statement;
 
 pub fn run(code: &str) {

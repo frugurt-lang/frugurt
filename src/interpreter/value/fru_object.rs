@@ -124,12 +124,10 @@ impl FruObject {
         let tt = self.get_type().get_type_type();
 
         match tt {
-            TypeType::Struct => {
-                FruObject::new_object(
-                    self.get_type(),
-                    self.internal.fields.borrow().iter().map(FruValue::fru_clone).collect(),
-                )
-            }
+            TypeType::Struct => FruObject::new_object(
+                self.get_type(),
+                self.internal.fields.borrow().iter().map(FruValue::fru_clone).collect(),
+            ),
 
             TypeType::Class | TypeType::Data => FruValue::Object(self.clone()),
         }

@@ -48,7 +48,7 @@ fn test_while() {
                 let a = a - 4;
                 s = s + a;
             }
-            
+
             assert_eq(s, -6);
         "#)
 }
