@@ -54,11 +54,9 @@ impl FruValue {
     pub fn curry_call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
             FruValue::Function(func) => {
-                // TODO: test compatibility
-
                 match func {
                     AnyFunction::CurriedFunction(func) => {
-                        let mut new_args = func.saved_args.clone(); // TODO: fru_clone()?
+                        let mut new_args = func.saved_args.clone(); // TODO: obsidian Issue 1
                         new_args.args.extend(args.args);
 
                         Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(

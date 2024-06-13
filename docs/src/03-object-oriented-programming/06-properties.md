@@ -25,7 +25,7 @@ v.Length = 1;
 print(v); // Vec { x: 0.6, y: 0.8 }
 ```
 
-In this example, Vec has a "property" Length, that is freely computable from other fields.
+In this example, Vec has a "property" Length that is easily computable from other fields.
 Like methods, properties can access fields, methods and other properties of the object.
 `(new_length)` can be omitted, in which case the default identifier `value` is used.
 Properties can be static.
@@ -44,5 +44,5 @@ print(Time.Now);
 ```
 
 In this example, imagine game engine.
-Static field time is updated by game engine every frame, and public property `Now` can be used to obtain current time
+Static field time is updated by game engine every frame, and public property `Now` can be used to get current time
 on the user side.

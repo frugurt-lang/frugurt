@@ -1,3 +1,4 @@
+mod ast_helpers;
 pub mod builtins;
 pub mod control;
 pub mod error;

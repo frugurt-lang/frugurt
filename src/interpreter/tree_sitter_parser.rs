@@ -6,14 +6,17 @@ use tree_sitter::{Node, Parser, Range};
 use tree_sitter_frugurt;
 
 use crate::interpreter::{
+    ast_helpers::{RawMethod, RawStaticField},
     expression::FruExpression,
     helpers::WrappingExtension,
     identifier::Identifier,
-    statement::{FruStatement, RawMethods},
-    value::fru_type::FruField,
-    value::fru_type::{Property, TypeType},
-    value::fru_value::FruValue,
-    value::function::{ArgumentList, FormalParameters},
+    statement::FruStatement,
+    value::{
+        fru_type::{Property, TypeType},
+        fru_type::FruField,
+        fru_value::FruValue,
+        function::{ArgumentList, FormalParameters}
+    }
 };
 
 #[derive(Error, Debug)]
@@ -78,7 +81,7 @@ pub enum ParseError {
 
 enum TypeMember {
     NormalField(FruField),
-    StaticField((FruField, Option<Box<FruExpression>>)),
+    StaticField(RawStaticField),
     Property(Property),
     StaticProperty(Property),
 }
@@ -522,16 +525,17 @@ fn parse_field(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
         });
     }
 
-    let res = FruField {
-        is_public,
-        ident,
-        type_ident,
-    };
-
     Ok(if is_static {
-        TypeMember::StaticField((res, value.map(Box::new)))
+        TypeMember::StaticField(RawStaticField {
+            ident,
+            value: value.map(Box::new),
+        })
     } else {
-        TypeMember::NormalField(res)
+        TypeMember::NormalField(FruField {
+            is_public,
+            ident,
+            type_ident,
+        })
     })
 }
 
@@ -541,7 +545,7 @@ fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
         Set((Identifier, Rc<FruStatement>), NodeWrapper<'a>),
     }
 
-    // TODO: add static and public modifiers
+    // TODO: add public modifier
     let ident = ast.get_child_ident("ident")?;
 
     let is_static = ast.get_child("static").is_ok();
@@ -607,22 +611,17 @@ fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
     })
 }
 
-fn parse_impl(ast: NodeWrapper) -> Result<RawMethods, ParseError> {
+fn parse_impl(ast: NodeWrapper) -> Result<Vec<RawMethod>, ParseError> {
     ast.parse_children("methods", parse_method)
 }
 
-fn parse_method(
-    ast: NodeWrapper,
-) -> Result<(bool, Identifier, FormalParameters, Rc<FruStatement>), ParseError> {
-    let is_static = ast.get_child("static").is_ok();
-
-    let ident = ast.get_child_ident("ident")?;
-
-    let args = ast.parse_child("parameters", parse_formal_parameters)?;
-
-    let body = ast.parse_child("body", parse_function_body)?.wrap_rc();
-
-    Ok((is_static, ident, args, body))
+fn parse_method(ast: NodeWrapper) -> Result<RawMethod, ParseError> {
+    Ok(RawMethod {
+        is_static: ast.get_child("static").is_ok(),
+        ident: ast.get_child_ident("ident")?,
+        parameters: ast.parse_child("parameters", parse_formal_parameters)?,
+        body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
+    })
 }
 
 fn parse_formal_parameters(ast: NodeWrapper) -> Result<FormalParameters, ParseError> {
@@ -659,6 +658,7 @@ fn parse_formal_parameter(
             x.get_child_ident("ident")?,
             Some(x.parse_child_expression("value")?),
         )),
+
         unexpected => Err(ParseError::InvalidAst {
             position: x.range(),
             error: format!("Not a formal parameter: {}", unexpected),
@@ -671,9 +671,8 @@ fn parse_argument_list(ast: NodeWrapper) -> Result<ArgumentList, ParseError> {
 
     let mut was_named = false;
 
-    for i in 0..args.len() {
-        // FIXME
-        if args[i].0.is_some() {
+    for (i, (name, _)) in args.iter().enumerate() {
+        if name.is_some() {
             was_named = true;
         } else if was_named {
             return Err(ParseError::Error {

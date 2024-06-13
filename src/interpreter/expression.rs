@@ -86,7 +86,7 @@ impl FruExpression {
             FruExpression::ScopeAccessor => Ok(FruScope::new_value(scope)),
 
             FruExpression::Function { args, body } => Ok(FruFunction {
-                argument_idents: args.clone(),
+                parameters: args.clone(),
                 body: body.clone(),
                 scope: scope.clone(),
             }

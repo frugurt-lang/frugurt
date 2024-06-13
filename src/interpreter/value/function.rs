@@ -33,7 +33,7 @@ pub enum AnyFunction {
 
 #[derive(Clone)]
 pub struct FruFunction {
-    pub argument_idents: FormalParameters,
+    pub parameters: FormalParameters,
     pub body: Rc<FruStatement>,
     pub scope: Rc<Scope>,
 }
@@ -77,7 +77,7 @@ impl FruFunction {
     fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         let new_scope = Scope::new_with_parent(self.scope.clone());
 
-        self.argument_idents.apply(args, new_scope.clone())?;
+        self.parameters.apply(args, new_scope.clone())?;
 
         returned_unit(self.body.execute(new_scope))
     }

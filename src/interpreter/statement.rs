@@ -1,19 +1,17 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::interpreter::{
+    ast_helpers::{RawMethod, RawStaticField},
     control::Control,
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
     value::fru_type::{FruField, FruType, Property, TypeType},
     value::fru_value::FruValue,
-    value::function::{FormalParameters, FruFunction},
+    value::function::FruFunction,
     value::operator::AnyOperator,
 };
 use crate::stdlib::scope::fru_scope::extract_scope_from_value;
-
-// TODO: make normal struct
-pub type RawMethods = Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>;
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
@@ -70,10 +68,10 @@ pub enum FruStatement {
         type_type: TypeType,
         ident: Identifier,
         fields: Vec<FruField>,
-        static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
+        static_fields: Vec<RawStaticField>,
         properties: HashMap<Identifier, Property>,
         static_properties: HashMap<Identifier, Property>,
-        methods: RawMethods,
+        methods: Vec<RawMethod>,
     },
 }
 
@@ -236,28 +234,28 @@ impl FruStatement {
                 let mut methods_ = HashMap::new();
                 let mut static_methods_ = HashMap::new();
 
-                for (is_static, ident, arg_list, body) in methods {
-                    let mt = FruFunction {
-                        argument_idents: arg_list.clone(),
-                        body: body.clone(),
+                for method in methods {
+                    let function = FruFunction {
+                        parameters: method.parameters.clone(),
+                        body: method.body.clone(),
                         scope: scope.clone(),
                     };
-                    if *is_static {
-                        static_methods_.insert(*ident, mt);
+                    if method.is_static {
+                        static_methods_.insert(method.ident, function);
                     } else {
-                        methods_.insert(*ident, mt);
+                        methods_.insert(method.ident, function);
                     }
                 }
 
                 let mut static_fields_evaluated = HashMap::new();
-                for (field, value) in static_fields {
-                    let value = if let Some(v) = value {
+                for static_field in static_fields {
+                    let value = if let Some(v) = &static_field.value {
                         v.evaluate(scope.clone())?
                     } else {
                         FruValue::Nah
                     };
 
-                    static_fields_evaluated.insert(field.ident, value);
+                    static_fields_evaluated.insert(static_field.ident, value);
                 }
 
                 scope.let_variable(

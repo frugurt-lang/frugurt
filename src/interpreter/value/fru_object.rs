@@ -63,13 +63,13 @@ impl FruObject {
         }
 
         if let Some(FruFunction {
-            argument_idents,
+            parameters: argument_idents,
             body,
             ..
         }) = self.get_type().get_method(ident)
         {
             return Ok(FruFunction {
-                argument_idents,
+                parameters: argument_idents,
                 body,
                 scope: Scope::new_with_object(self.clone()),
             }

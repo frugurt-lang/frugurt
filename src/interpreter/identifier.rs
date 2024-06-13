@@ -21,12 +21,6 @@ pub struct OperatorIdentifier {
     right: Identifier,
 }
 
-pub fn reset_poison() {
-    if BACKWARDS_MAP.lock().is_err() {
-        BACKWARDS_MAP.clear_poison()
-    }
-}
-
 impl Identifier {
     pub fn new(ident: &str) -> Self {
         let mut hasher = DefaultHasher::new();
