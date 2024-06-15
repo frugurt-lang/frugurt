@@ -168,7 +168,7 @@ fn test_static_basics() {
                     static Foo {
                         get => inner + 5;
                         set(val) {
-                            inner = val - 5;  
+                            inner = val - 5;
                         }
                     }
                 }

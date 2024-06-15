@@ -1,5 +1,6 @@
 use std::{boxed::Box, collections::hash_map::Entry, collections::HashMap, rc::Rc, str::Utf8Error};
 
+use macros::static_ident;
 use snailquote::unescape;
 use thiserror::Error;
 use tree_sitter::{Node, Parser, Range};
@@ -12,11 +13,10 @@ use crate::interpreter::{
     identifier::Identifier,
     statement::FruStatement,
     value::{
-        fru_type::{Property, TypeType},
-        fru_type::FruField,
+        fru_type::{FruField, Property, TypeType},
         fru_value::FruValue,
-        function::{ArgumentList, FormalParameters}
-    }
+        function::{ArgumentList, FormalParameters},
+    },
 };
 
 #[derive(Error, Debug)]
@@ -559,7 +559,7 @@ fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
 
                 Item::Set(
                     (
-                        ident.map_or_else(|| Identifier::new("value"), |x| x.0),
+                        ident.map_or_else(|| static_ident!("value"), |x| x.0),
                         x.parse_child_statement("body")?.wrap_rc(),
                     ),
                     x,

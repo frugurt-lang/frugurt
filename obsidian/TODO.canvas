@@ -4,24 +4,22 @@
 		{"id":"0e8289b07d6ca556","type":"group","x":-600,"y":600,"width":400,"height":380,"label":"CI/CD"},
 		{"id":"070a7b543247f7a2","type":"text","text":"simplified syntax for read-only properties","x":-290,"y":360,"width":250,"height":60},
 		{"id":"5d4e5bd937436926","type":"text","text":"computed properties","x":-640,"y":360,"width":250,"height":60,"color":"4"},
-		{"id":"18df0d00841f02bd","type":"text","text":"collections\n- [ ] list\n- [ ] set\n- [ ] map\n- [ ] tuple?","x":-80,"y":10,"width":250,"height":182,"color":"3"},
 		{"id":"1c18b7117da43e6e","type":"text","text":"\"evil\" features","x":-460,"y":-180,"width":250,"height":67,"color":"4"},
 		{"id":"41499d9f6eafdeec","type":"text","text":"trait polymorphism for native types","x":-460,"y":-40,"width":250,"height":60,"color":"4"},
 		{"id":"4ab66adbfddd4d15","type":"text","text":"scope manipulation features","x":-80,"y":-180,"width":250,"height":60,"color":"4"},
-		{"id":"feb6594a9d261a54","type":"text","text":"modules and imports","x":260,"y":-180,"width":250,"height":60,"color":"4"},
-		{"id":"545169f683d1ebef","type":"text","text":"import as expression","x":620,"y":-180,"width":250,"height":60,"color":"4"},
+		{"id":"aa2bea5c494cbddd","type":"text","text":"add traceback for errors","x":-160,"y":252,"width":250,"height":60},
 		{"id":"550b9c0e5c7cd03a","type":"text","text":"derivation and implicit derivation, and make them overridable (the main reason is equality of objects)","x":620,"y":300,"width":250,"height":160},
-		{"id":"97a68fbd25b52ede","type":"text","text":"destructuring let statements","x":620,"y":-280,"width":250,"height":60},
-		{"id":"b9c4b54397d2bf2d","type":"text","text":"macro for computing hash of ident in compile time","x":-43,"y":666,"width":250,"height":87},
-		{"id":"b9e932828d9a3c13","type":"text","text":"make cd for windows and linux releases","x":-580,"y":640,"width":250,"height":60},
-		{"id":"aa2bea5c494cbddd","x":-160,"y":252,"width":250,"height":60,"type":"text","text":"add traceback for errors"}
+		{"id":"97a68fbd25b52ede","type":"text","text":"destructuring let statements","x":800,"y":160,"width":250,"height":60},
+		{"id":"feb6594a9d261a54","type":"text","text":"modules and imports\n- [ ] tests\n- [x] import as expression","x":260,"y":-180,"width":250,"height":120,"color":"3"},
+		{"id":"18df0d00841f02bd","type":"text","text":"collections\n- [ ] list\n- [ ] set\n- [ ] map\n- [ ] tuple?","x":-80,"y":0,"width":250,"height":182,"color":"3"},
+		{"id":"b9c4b54397d2bf2d","type":"text","text":"macro for computing hash of ident in compile time","x":-40,"y":660,"width":250,"height":87,"color":"4"},
+		{"id":"b9e932828d9a3c13","type":"text","text":"make cd for windows and linux releases","x":-580,"y":640,"width":250,"height":60}
 	],
 	"edges":[
 		{"id":"4f43eea514ca8881","fromNode":"41499d9f6eafdeec","fromSide":"right","toNode":"4ab66adbfddd4d15","toSide":"left"},
 		{"id":"94361d23f182cbe8","fromNode":"4ab66adbfddd4d15","fromSide":"right","toNode":"feb6594a9d261a54","toSide":"left"},
 		{"id":"e3e0be30be175453","fromNode":"1c18b7117da43e6e","fromSide":"right","toNode":"4ab66adbfddd4d15","toSide":"left"},
 		{"id":"8706d0e0442108f4","fromNode":"41499d9f6eafdeec","fromSide":"right","toNode":"18df0d00841f02bd","toSide":"left"},
-		{"id":"10698732105d19f9","fromNode":"5d4e5bd937436926","fromSide":"right","toNode":"070a7b543247f7a2","toSide":"left"},
-		{"id":"3f046cb411b32fae","fromNode":"feb6594a9d261a54","fromSide":"right","toNode":"545169f683d1ebef","toSide":"left"}
+		{"id":"10698732105d19f9","fromNode":"5d4e5bd937436926","fromSide":"right","toNode":"070a7b543247f7a2","toSide":"left"}
 	]
 }

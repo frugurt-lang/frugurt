@@ -1,5 +1,7 @@
 use std::{any::Any, rc::Rc};
 
+use macros::static_ident;
+
 use crate::interpreter::{
     error::FruError,
     identifier::Identifier,
@@ -24,7 +26,7 @@ impl INativeObject for FruScope {
     }
 
     fn get_type_identifier(&self) -> Identifier {
-        Identifier::new("Scope")
+        static_ident!("Scope")
     }
 
     fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
@@ -34,6 +36,10 @@ impl INativeObject for FruScope {
     fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         self.scope.let_set_variable(ident, value);
         Ok(())
+    }
+
+    fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject> {
+        self
     }
 }
 

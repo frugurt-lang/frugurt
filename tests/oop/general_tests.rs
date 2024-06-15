@@ -35,7 +35,7 @@ fn test_operators() {
             struct Vec2 {
                 x;
                 y;
-            }     
+            }
 
             operator + (a : Vec2, b : Vec2) {
                 Vec2 :{ a.x + b.x, a.y + b.y }

@@ -2,11 +2,14 @@ use std::{fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
     error::FruError,
+    identifier::id,
     identifier::Identifier,
-    value::fru_object::FruObject,
-    value::fru_type::FruType,
-    value::function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
-    value::native::object::NativeObject,
+    value::{
+        fru_object::FruObject,
+        fru_type::FruType,
+        function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
+        native::object::NativeObject,
+    },
 };
 
 pub type TFnBuiltin = fn(EvaluatedArgumentList) -> Result<FruValue, FruError>;
@@ -32,12 +35,12 @@ pub enum FruValue {
 impl FruValue {
     pub fn get_type_identifier(&self) -> Identifier {
         match self {
-            FruValue::Nah => Identifier::for_nah(),
-            FruValue::Number(_) => Identifier::for_number(),
-            FruValue::Bool(_) => Identifier::for_bool(),
-            FruValue::String(_) => Identifier::for_string(),
-            FruValue::Function(_) => Identifier::for_function(),
-            FruValue::Type(_) => Identifier::for_type(),
+            FruValue::Nah => id::NAH,
+            FruValue::Number(_) => id::NUMBER,
+            FruValue::Bool(_) => id::BOOL,
+            FruValue::String(_) => id::STRING,
+            FruValue::Function(_) => id::FUNCTION,
+            FruValue::Type(_) => id::TYPE,
             FruValue::Object(obj) => obj.get_type().get_ident(),
             FruValue::NativeObject(obj) => obj.get_type_identifier(),
         }

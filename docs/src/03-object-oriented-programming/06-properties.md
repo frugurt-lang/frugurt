@@ -34,7 +34,7 @@ Also, there is no need to implement `get` and `set` every time.
 ```frugurt
 class Time {
     static time = 0;
-    
+
     pub static Now {
         get { time } // this is equivalent to `get => time;`
     }

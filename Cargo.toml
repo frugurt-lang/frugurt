@@ -16,6 +16,8 @@ tree-sitter = "0.22.5"
 #tree-sitter-frugurt = "0.0.10"
 tree-sitter-frugurt = { path = "../tree-sitter-frugurt" }
 #uid = "0.1.7"
+macros = {path = "./macros"}
+ctor = "0.2.8"
 
 [dev-dependencies]
 tempfile = "3.10.1"
