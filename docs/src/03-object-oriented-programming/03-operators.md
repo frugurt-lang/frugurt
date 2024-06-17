@@ -40,13 +40,13 @@ print(a); // Vector{x=4, y=6}
 
 Operator precedences from highest to lowest:
 
-- Custom operators have the highest precedence
+- All custom operators
 - `**` `<>`
 - `*` `/` `%`
 - `+` `-`
 - `<` `>` `<=` `>=`
 - `==` `!=`
 - `&&`
-- `||` - the lowest precedence
+- `||`
 
-All operators have left associativity
+All operators are left associative
