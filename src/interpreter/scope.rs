@@ -98,12 +98,10 @@ impl Scope {
             Ok(op.clone())
         } else {
             match &self.parent {
-                ScopeAncestor::None => {
-                    Err(FruError::new(format!(
-                        "operator `{:?}` does not exist",
-                        ident
-                    )))
-                }
+                ScopeAncestor::None => Err(FruError::new(format!(
+                    "operator `{:?}` does not exist",
+                    ident
+                ))),
                 ScopeAncestor::Parent(parent)
                 | ScopeAncestor::Object { parent, .. }
                 | ScopeAncestor::Type { parent, .. } => parent.get_operator(ident),
@@ -117,6 +115,10 @@ impl Scope {
 
     pub fn has_variable(&self, ident: Identifier) -> bool {
         self.variables.borrow().contains_key(&ident)
+    }
+
+    pub fn let_set_variable(&self, ident: Identifier, value: FruValue) {
+        self.variables.borrow_mut().insert(ident, value);
     }
 }
 
@@ -144,17 +146,13 @@ impl ScopeAncestor {
 
             ScopeAncestor::Parent(parent) => parent.set_variable(ident, value),
 
-            ScopeAncestor::Object { object, parent } => {
-                object
-                    .set_prop(ident, value.clone())
-                    .or_else(|_| parent.set_variable(ident, value))
-            }
+            ScopeAncestor::Object { object, parent } => object
+                .set_prop(ident, value.clone())
+                .or_else(|_| parent.set_variable(ident, value)),
 
-            ScopeAncestor::Type { type_, parent } => {
-                type_
-                    .set_prop(ident, value.clone())
-                    .or_else(|_| parent.set_variable(ident, value))
-            }
+            ScopeAncestor::Type { type_, parent } => type_
+                .set_prop(ident, value.clone())
+                .or_else(|_| parent.set_variable(ident, value)),
         }
     }
 }

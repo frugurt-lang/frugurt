@@ -1,0 +1,7 @@
+{
+	"nodes":[
+		{"id":"1ac37b84ff817ecc","x":-733,"y":-605,"width":473,"height":165,"type":"text","text":"Issue 1:\nIf curried function mutates one of it's arguments, should subsequent calls receive mutated value or should it be cloned on call?"},
+		{"id":"901340d58aa31311","type":"text","text":"introduce new wrapper extensions like `wrap_ok`, `wrap_err`, `wrap_value`","x":-720,"y":-220,"width":250,"height":130}
+	],
+	"edges":[]
+}

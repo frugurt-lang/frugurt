@@ -4,13 +4,13 @@ use crate::run;
 fn test_curry_1() {
     run(r#"
             let f = fn (a, b, c) {a + b + c};
-            
+
             let g = f$(1);
-            
+
             assert_eq(g(2, 3), 6);
-            
+
             assert_eq(f(1, 2, 3), 6);
-            
+
             assert_eq(g$(2)(5), 8);
 
             print(f);

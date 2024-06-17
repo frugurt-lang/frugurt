@@ -2,9 +2,8 @@ use std::collections::HashMap;
 
 use crate::interpreter::{
     error::FruError,
-    identifier::{Identifier as Id, OperatorIdentifier as OpId},
-    value::fru_value::FruValue,
-    value::operator::AnyOperator,
+    identifier::{id, OperatorIdentifier},
+    value::{fru_value::FruValue, operator::AnyOperator},
 };
 
 macro_rules! builtin_operator {
@@ -20,11 +19,11 @@ macro_rules! builtin_operator {
 }
 
 macro_rules! operator_group {
-    ($ident1:expr, $ident2:expr, [$(($op:ident, $fn_name:ident)),*]) => {
+    ($ident1:ident, $ident2:ident, [$(($op:ident, $fn_name:ident)),*]) => {
         [
             $(
                 (
-                    OpId::new(Id::$op(), $ident1, $ident2),
+                    OperatorIdentifier::new(id::$op, id::$ident1, id::$ident2),
                     AnyOperator::BuiltinOperator($fn_name),
                 )
             ),*
@@ -32,44 +31,55 @@ macro_rules! operator_group {
     };
 }
 
-pub fn builtin_operators() -> HashMap<OpId, AnyOperator> {
-    let mut res = HashMap::from(operator_group!(Id::for_number(), Id::for_number(), [
-        (for_plus, num_plus_num),
-        (for_minus, num_minus_num),
-        (for_multiply, num_mul_num),
-        (for_divide, num_div_num),
-        (for_mod, num_mod_num),
-        (for_pow, num_pow_num),
-        (for_less, num_less_num),
-        (for_less_eq, num_less_eq_num),
-        (for_greater, num_greater_num),
-        (for_greater_eq, num_greater_eq_num),
-        (for_eq, num_eq_num),
-        (for_not_eq, num_not_eq_num)
-    ]));
+pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
+    let mut res = HashMap::new();
 
-    res.extend(operator_group!(Id::for_bool(), Id::for_bool(), [
-        (for_and, bool_and_bool),
-        (for_or, bool_or_bool)
-    ]));
+    res.extend(operator_group!(
+        NUMBER,
+        NUMBER,
+        [
+            (PLUS, num_plus_num),
+            (MINUS, num_minus_num),
+            (MULTIPLY, num_mul_num),
+            (DIVIDE, num_div_num),
+            (MOD, num_mod_num),
+            (POW, num_pow_num),
+            (LESS, num_less_num),
+            (LESS_EQ, num_less_eq_num),
+            (GREATER, num_greater_num),
+            (GREATER_EQ, num_greater_eq_num),
+            (EQ, num_eq_num),
+            (NOT_EQ, num_not_eq_num)
+        ]
+    ));
 
-    res.extend(operator_group!(Id::for_string(), Id::for_string(), [
-        (for_combine, string_concat),
-        (for_less, string_less_string),
-        (for_less_eq, string_less_eq_string),
-        (for_greater, string_greater_string),
-        (for_greater_eq, string_greater_eq_string),
-        (for_eq, string_eq_string),
-        (for_not_eq, string_not_eq_string)
-    ]));
+    res.extend(operator_group!(
+        BOOL,
+        BOOL,
+        [(AND, bool_and_bool), (OR, bool_or_bool)]
+    ));
+
+    res.extend(operator_group!(
+        STRING,
+        STRING,
+        [
+            (COMBINE, string_concat),
+            (LESS, string_less_string),
+            (LESS_EQ, string_less_eq_string),
+            (GREATER, string_greater_string),
+            (GREATER_EQ, string_greater_eq_string),
+            (EQ, string_eq_string),
+            (NOT_EQ, string_not_eq_string)
+        ]
+    ));
 
     res.extend([
         (
-            OpId::new(Id::for_multiply(), Id::for_string(), Id::for_number()),
+            OperatorIdentifier::new(id::MULTIPLY, id::STRING, id::NUMBER),
             AnyOperator::BuiltinOperator(string_mul_num),
         ),
         (
-            OpId::new(Id::for_multiply(), Id::for_number(), Id::for_string()),
+            OperatorIdentifier::new(id::MULTIPLY, id::NUMBER, id::STRING),
             AnyOperator::BuiltinOperator(num_mul_string),
         ),
     ]);
@@ -128,6 +138,7 @@ builtin_operator!(string_greater_string, String, String, Bool, >);
 builtin_operator!(string_greater_eq_string, String, String, Bool, >=);
 builtin_operator!(string_eq_string, String, String, Bool, ==);
 builtin_operator!(string_not_eq_string, String, String, Bool, !=);
+
 fn string_concat(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
     if let (FruValue::String(l), FruValue::String(r)) = (left, right) {
         return Ok(FruValue::String(l + &*r));

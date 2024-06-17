@@ -1,4 +1,3 @@
-// TODO: make use of this
 use thiserror::Error;
 
 use crate::interpreter::value::function::ArgumentError;

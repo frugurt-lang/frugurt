@@ -132,7 +132,7 @@ impl FruType {
 
         if let Some(static_method) = self.internal.static_methods.get(&ident) {
             return Ok(FruFunction {
-                argument_idents: static_method.argument_idents.clone(),
+                parameters: static_method.parameters.clone(),
                 body: static_method.body.clone(),
                 scope: Scope::new_with_type(self.clone()),
             }

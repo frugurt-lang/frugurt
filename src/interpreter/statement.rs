@@ -1,21 +1,28 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use crate::interpreter::{
+    ast_helpers::{RawMethod, RawStaticField},
     control::Control,
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
     value::fru_type::{FruField, FruType, Property, TypeType},
     value::fru_value::FruValue,
-    value::function::{FormalParameters, FruFunction},
+    value::function::FruFunction,
     value::operator::AnyOperator,
 };
-
-pub type RawMethods = Vec<(bool, Identifier, FormalParameters, Rc<FruStatement>)>;
+use crate::stdlib::scope::fru_scope::extract_scope_from_value;
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
+    SourceCode {
+        body: Vec<FruStatement>,
+    },
     Block {
+        body: Vec<FruStatement>,
+    },
+    ScopeModifier {
+        what: Box<FruExpression>,
         body: Vec<FruStatement>,
     },
     Expression {
@@ -61,18 +68,41 @@ pub enum FruStatement {
         type_type: TypeType,
         ident: Identifier,
         fields: Vec<FruField>,
-        static_fields: Vec<(FruField, Option<Box<FruExpression>>)>,
+        static_fields: Vec<RawStaticField>,
         properties: HashMap<Identifier, Property>,
         static_properties: HashMap<Identifier, Property>,
-        methods: RawMethods,
+        methods: Vec<RawMethod>,
     },
 }
 
 impl FruStatement {
     pub fn execute(&self, scope: Rc<Scope>) -> Result<(), Control> {
         match self {
+            FruStatement::SourceCode { body } => {
+                for statement in body {
+                    statement.execute(scope.clone())?;
+                }
+            }
+
             FruStatement::Block { body } => {
                 let new_scope = Scope::new_with_parent(scope.clone());
+
+                for statement in body {
+                    statement.execute(new_scope.clone())?;
+                }
+            }
+
+            FruStatement::ScopeModifier { what, body } => {
+                let what = what.evaluate(scope)?;
+                let new_scope = match extract_scope_from_value(&what) {
+                    Some(x) => x,
+                    None => {
+                        return Control::new_err(format!(
+                            "Expected `Scope` in scope modifier statement, got `{}`",
+                            what.get_type_identifier()
+                        ))
+                    }
+                };
 
                 for statement in body {
                     statement.execute(new_scope.clone())?;
@@ -204,28 +234,28 @@ impl FruStatement {
                 let mut methods_ = HashMap::new();
                 let mut static_methods_ = HashMap::new();
 
-                for (is_static, ident, arg_list, body) in methods {
-                    let mt = FruFunction {
-                        argument_idents: arg_list.clone(),
-                        body: body.clone(),
+                for method in methods {
+                    let function = FruFunction {
+                        parameters: method.parameters.clone(),
+                        body: method.body.clone(),
                         scope: scope.clone(),
                     };
-                    if *is_static {
-                        static_methods_.insert(*ident, mt);
+                    if method.is_static {
+                        static_methods_.insert(method.ident, function);
                     } else {
-                        methods_.insert(*ident, mt);
+                        methods_.insert(method.ident, function);
                     }
                 }
 
                 let mut static_fields_evaluated = HashMap::new();
-                for (field, value) in static_fields {
-                    let value = if let Some(v) = value {
+                for static_field in static_fields {
+                    let value = if let Some(v) = &static_field.value {
                         v.evaluate(scope.clone())?
                     } else {
                         FruValue::Nah
                     };
 
-                    static_fields_evaluated.insert(field.ident, value);
+                    static_fields_evaluated.insert(static_field.ident, value);
                 }
 
                 scope.let_variable(

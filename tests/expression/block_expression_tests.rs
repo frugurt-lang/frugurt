@@ -8,7 +8,7 @@ fn test_basics() {
                 let x = x + 7;
                 x * x
             };
-            
+
             assert_eq(y, 64);
         "#)
 }

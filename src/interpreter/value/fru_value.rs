@@ -2,11 +2,14 @@ use std::{fmt::Debug, rc::Rc};
 
 use crate::interpreter::{
     error::FruError,
+    identifier::id,
     identifier::Identifier,
-    value::fru_object::FruObject,
-    value::fru_type::FruType,
-    value::function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
-    value::native::object::NativeObject,
+    value::{
+        fru_object::FruObject,
+        fru_type::FruType,
+        function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
+        native::object::NativeObject,
+    },
 };
 
 pub type TFnBuiltin = fn(EvaluatedArgumentList) -> Result<FruValue, FruError>;
@@ -32,12 +35,12 @@ pub enum FruValue {
 impl FruValue {
     pub fn get_type_identifier(&self) -> Identifier {
         match self {
-            FruValue::Nah => Identifier::for_nah(),
-            FruValue::Number(_) => Identifier::for_number(),
-            FruValue::Bool(_) => Identifier::for_bool(),
-            FruValue::String(_) => Identifier::for_string(),
-            FruValue::Function(_) => Identifier::for_function(),
-            FruValue::Type(_) => Identifier::for_type(),
+            FruValue::Nah => id::NAH,
+            FruValue::Number(_) => id::NUMBER,
+            FruValue::Bool(_) => id::BOOL,
+            FruValue::String(_) => id::STRING,
+            FruValue::Function(_) => id::FUNCTION,
+            FruValue::Type(_) => id::TYPE,
             FruValue::Object(obj) => obj.get_type().get_ident(),
             FruValue::NativeObject(obj) => obj.get_type_identifier(),
         }
@@ -54,11 +57,9 @@ impl FruValue {
     pub fn curry_call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
             FruValue::Function(func) => {
-                // TODO: test compatibility
-
                 match func {
                     AnyFunction::CurriedFunction(func) => {
-                        let mut new_args = func.saved_args.clone(); // TODO: fru_clone()?
+                        let mut new_args = func.saved_args.clone(); // TODO: obsidian Issue 1
                         new_args.args.extend(args.args);
 
                         Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
@@ -69,14 +70,12 @@ impl FruValue {
                         ))))
                     }
 
-                    normal => {
-                        Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
-                            CurriedFunction {
-                                saved_args: args,
-                                function: Rc::new(normal.clone()),
-                            },
-                        ))))
-                    }
+                    normal => Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
+                        CurriedFunction {
+                            saved_args: args,
+                            function: Rc::new(normal.clone()),
+                        },
+                    )))),
                 }
             }
 
@@ -92,12 +91,10 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.instantiate(args),
 
-            _ => {
-                FruError::new_res(format!(
-                    "`{}` is not instantiatable",
-                    self.get_type_identifier()
-                ))
-            }
+            _ => FruError::new_res(format!(
+                "`{}` is not instantiatable",
+                self.get_type_identifier()
+            )),
         }
     }
 
@@ -109,12 +106,10 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.get_prop(ident),
 
-            _ => {
-                FruError::new_res(format!(
-                    "cannot access prop of `{}`",
-                    self.get_type_identifier()
-                ))
-            }
+            _ => FruError::new_res(format!(
+                "cannot access prop of `{}`",
+                self.get_type_identifier()
+            )),
         }
     }
 
@@ -126,12 +121,10 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.set_prop(ident, value),
 
-            _ => {
-                FruError::new_res(format!(
-                    "cannot set prop of `{}`",
-                    self.get_type_identifier()
-                ))
-            }
+            _ => FruError::new_res(format!(
+                "cannot set prop of `{}`",
+                self.get_type_identifier()
+            )),
         }
     }
 

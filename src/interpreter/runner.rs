@@ -1,10 +1,15 @@
-use std::{path::Path, rc::Rc};
+use std::{fs::read_to_string, path::Path, rc::Rc};
 
 use crate::interpreter::{control::Control, error::FruError, scope::Scope, tree_sitter_parser};
 
 pub fn execute_file(path: &Path) -> Result<Rc<Scope>, FruError> {
-    let source_code = std::fs::read_to_string(path).unwrap();
+    let source_code = read_to_string(path)
+        .map_err(|err| FruError::new(format!("Error reading file {path:?} {err}")))?;
 
+    execute_source_code(source_code)
+}
+
+pub fn execute_source_code(source_code: String) -> Result<Rc<Scope>, FruError> {
     let ast = match tree_sitter_parser::parse(source_code) {
         Ok(ast) => ast,
         Err(err) => return Err(FruError::new(err.to_string())),

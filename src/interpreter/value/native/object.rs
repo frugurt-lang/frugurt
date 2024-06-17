@@ -1,15 +1,17 @@
-use std::rc::Rc;
+use std::{any::Any, rc::Rc};
 
 use crate::interpreter::{
     error::FruError,
+    identifier::id,
     identifier::Identifier,
-    value::fru_value::FruValue,
-    value::function::EvaluatedArgumentList,
+    value::{fru_value::FruValue, function::EvaluatedArgumentList},
 };
 
 pub trait INativeObject {
+    fn as_any(&self) -> &dyn Any;
+
     fn get_type_identifier(&self) -> Identifier {
-        Identifier::for_native_object()
+        id::NATIVE_OBJECT
     }
 
     fn call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
@@ -44,17 +46,19 @@ pub trait INativeObject {
         ))
     }
 
-    fn fru_clone(&self) -> FruValue {
-        panic!();
-    }
+    fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject>;
 }
 
 #[derive(Clone)]
 pub struct NativeObject {
-    pub internal: Rc<dyn INativeObject>,
+    internal: Rc<dyn INativeObject>,
 }
 
 impl NativeObject {
+    pub fn new(internal: Rc<dyn INativeObject>) -> Self {
+        Self { internal }
+    }
+
     pub fn get_type_identifier(&self) -> Identifier {
         self.internal.get_type_identifier()
     }
@@ -80,6 +84,12 @@ impl NativeObject {
     }
 
     pub fn fru_clone(&self) -> FruValue {
-        self.internal.fru_clone()
+        FruValue::NativeObject(NativeObject {
+            internal: self.internal.clone().fru_clone(),
+        })
+    }
+
+    pub fn downcast<T: 'static>(&self) -> Option<&T> {
+        self.internal.as_any().downcast_ref::<T>()
     }
 }

@@ -1,10 +1,7 @@
 use std::{
     collections::HashMap,
-    fmt::Debug,
-    fmt::Display,
-    hash::DefaultHasher,
-    hash::Hash,
-    hash::Hasher,
+    fmt::{Debug, Display},
+    hash::{DefaultHasher, Hash, Hasher},
     sync::Mutex,
 };
 
@@ -26,18 +23,10 @@ pub struct OperatorIdentifier {
     right: Identifier,
 }
 
-pub fn reset_poison() {
-    if BACKWARDS_MAP.lock().is_err() {
-        BACKWARDS_MAP.clear_poison()
-    }
-}
-
 impl Identifier {
     pub fn new(ident: &str) -> Self {
         let mut hasher = DefaultHasher::new();
-
         ident.hash(&mut hasher);
-
         let hashed_ident = hasher.finish();
 
         BACKWARDS_MAP
@@ -46,6 +35,10 @@ impl Identifier {
             .entry(hashed_ident)
             .or_insert_with(|| ident.to_string());
 
+        Self { hashed_ident }
+    }
+
+    pub const fn new_unchecked(hashed_ident: u64) -> Self {
         Self { hashed_ident }
     }
 }
@@ -78,95 +71,36 @@ impl Debug for OperatorIdentifier {
     }
 }
 
-impl Identifier {
-    // builtin types
-    pub fn for_nah() -> Self {
-        Self::new("Nah")
-    }
+pub mod id {
+    use macros::static_ident;
 
-    pub fn for_number() -> Self {
-        Self::new("Number")
-    }
+    use crate::interpreter::identifier::Identifier;
 
-    pub fn for_bool() -> Self {
-        Self::new("Bool")
-    }
+    // types
+    pub const NAH: Identifier = static_ident!("Nah");
+    pub const NUMBER: Identifier = static_ident!("Number");
+    pub const BOOL: Identifier = static_ident!("Bool");
+    pub const STRING: Identifier = static_ident!("String");
+    pub const FUNCTION: Identifier = static_ident!("Function");
+    pub const TYPE: Identifier = static_ident!("Type");
+    pub const NATIVE_OBJECT: Identifier = static_ident!("NativeObject");
 
-    pub fn for_string() -> Self {
-        Self::new("String")
-    }
+    // arithmetic
+    pub const PLUS: Identifier = static_ident!("+");
+    pub const MINUS: Identifier = static_ident!("-");
+    pub const MULTIPLY: Identifier = static_ident!("*");
+    pub const DIVIDE: Identifier = static_ident!("/");
+    pub const MOD: Identifier = static_ident!("%");
+    pub const POW: Identifier = static_ident!("**");
+    pub const AND: Identifier = static_ident!("&&");
+    pub const OR: Identifier = static_ident!("||");
+    pub const COMBINE: Identifier = static_ident!("<>");
 
-    pub fn for_function() -> Self {
-        Self::new("Function")
-    }
-
-    pub fn for_type() -> Self {
-        Self::new("Type")
-    }
-
-    pub fn for_native_object() -> Self {
-        Self::new("NativeObject")
-    }
-
-    // builtin operators
-    pub fn for_plus() -> Self {
-        Self::new("+")
-    }
-
-    pub fn for_minus() -> Self {
-        Self::new("-")
-    }
-
-    pub fn for_multiply() -> Self {
-        Self::new("*")
-    }
-
-    pub fn for_divide() -> Self {
-        Self::new("/")
-    }
-
-    pub fn for_mod() -> Self {
-        Self::new("%")
-    }
-
-    pub fn for_pow() -> Self {
-        Self::new("**")
-    }
-
-    pub fn for_and() -> Self {
-        Self::new("&&")
-    }
-
-    pub fn for_or() -> Self {
-        Self::new("||")
-    }
-
-    pub fn for_combine() -> Self {
-        Self::new("<>")
-    }
-
-    // builtin operators (comparison)
-    pub fn for_less() -> Self {
-        Self::new("<")
-    }
-
-    pub fn for_less_eq() -> Self {
-        Self::new("<=")
-    }
-
-    pub fn for_greater() -> Self {
-        Self::new(">")
-    }
-
-    pub fn for_greater_eq() -> Self {
-        Self::new(">=")
-    }
-
-    pub fn for_eq() -> Self {
-        Self::new("==")
-    }
-
-    pub fn for_not_eq() -> Self {
-        Self::new("!=")
-    }
+    // comparison
+    pub const LESS: Identifier = static_ident!("<");
+    pub const LESS_EQ: Identifier = static_ident!("<=");
+    pub const GREATER: Identifier = static_ident!(">");
+    pub const GREATER_EQ: Identifier = static_ident!(">=");
+    pub const EQ: Identifier = static_ident!("==");
+    pub const NOT_EQ: Identifier = static_ident!("!=");
 }

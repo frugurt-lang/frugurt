@@ -17,3 +17,6 @@
   - [Methods](./03-object-oriented-programming/04-methods.md)
   - [Statics](./03-object-oriented-programming/05-statics.md)
   - [Properties](./03-object-oriented-programming/06-properties.md)
+- [Scope manipulation](./04-scope-manipulation/01-index.md)
+  - [Scope keyword](./04-scope-manipulation/02-scope.md)
+  - [Imports](./04-scope-manipulation/03-imports.md)

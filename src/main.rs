@@ -1,12 +1,10 @@
-#![feature(iterator_try_collect)]
-
 use std::{path::PathBuf, time::Instant};
 
+use crate::interpreter::runner::execute_file;
 use clap::Parser;
 
-use crate::interpreter::execute_file;
-
 mod interpreter;
+mod stdlib;
 
 #[derive(Parser, Debug)]
 struct Args {
