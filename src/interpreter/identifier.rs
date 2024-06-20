@@ -8,7 +8,7 @@ use std::{
 use once_cell::sync::Lazy;
 use uid::Id;
 
-use crate::interpreter::value::native::object::OfObject;
+use crate::interpreter::value::native_object::OfObject;
 
 // this map is used for Identifier visualization
 static BACKWARDS_MAP: Lazy<Mutex<HashMap<u64, String>>> = Lazy::new(Default::default);

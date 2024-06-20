@@ -15,7 +15,7 @@ use crate::interpreter::{
     value::{
         fru_type::{FruField, Property, TypeFlavor},
         fru_value::FruValue,
-        function::{ArgumentList, FormalParameters},
+        function_helpers::{ArgumentList, FormalParameters},
     },
 };
 
@@ -302,7 +302,10 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 _ => {
                     return Err(ParseError::InvalidAst {
                         position: ast.get_child("type_flavor")?.range(),
-                        error: format!("Invalid type flavor: {}", ast.get_child_text("type_flavor")?),
+                        error: format!(
+                            "Invalid type flavor: {}",
+                            ast.get_child_text("type_flavor")?
+                        ),
                     });
                 }
             };

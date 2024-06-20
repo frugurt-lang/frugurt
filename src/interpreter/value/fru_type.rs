@@ -11,10 +11,8 @@ use crate::interpreter::{
     scope::Scope,
     statement::FruStatement,
     value::{
-        fru_object::FruObject,
-        fru_value::FruValue,
-        function::{EvaluatedArgumentList, FruFunction},
-        native::object::OfObject,
+        fru_function::FruFunction, fru_object::FruObject, fru_value::FruValue,
+        function_helpers::EvaluatedArgumentList, native_object::OfObject,
     },
 };
 
@@ -28,8 +26,8 @@ pub struct FruTypeInternal {
     ident: Identifier,
     type_flavor: TypeFlavor,
     fields: Vec<FruField>,
-    static_fields: RefCell<HashMap<Identifier, FruValue>>,
     // TODO: change for FruField?
+    static_fields: RefCell<HashMap<Identifier, FruValue>>,
     properties: HashMap<Identifier, Property>,
     static_properties: HashMap<Identifier, Property>,
     methods: HashMap<Identifier, FruFunction>,
@@ -142,12 +140,11 @@ impl FruType {
         }
 
         if let Some(static_method) = self.internal.static_methods.get(&ident) {
-            return Ok(FruFunction {
+            return Ok(FruValue::Function(Rc::new(FruFunction {
                 parameters: static_method.parameters.clone(),
                 body: static_method.body.clone(),
                 scope: Scope::new_with_type(self.clone()),
-            }
-            .into());
+            })));
         }
 
         FruError::new_res(format!("static prop `{}` not found", ident))

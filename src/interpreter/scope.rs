@@ -7,8 +7,8 @@ use crate::{
         error::FruError,
         identifier::{Identifier, OperatorIdentifier},
         value::{
-            fru_object::FruObject, fru_type::FruType, fru_value::FruValue,
-            native::object::OfObject, operator::AnyOperator,
+            fru_object::FruObject, fru_type::FruType, fru_value::FruValue, native_object::OfObject,
+            operator::AnyOperator,
         },
     },
     stdlib::builtins::{operators::builtin_operators, variables::builtin_variables},

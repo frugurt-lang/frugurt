@@ -3,17 +3,18 @@ use std::{path::PathBuf, rc::Rc};
 use crate::{
     interpreter::{
         control::Control,
-        identifier::Identifier,
-        identifier::OperatorIdentifier,
+        identifier::{Identifier, OperatorIdentifier},
         runner,
         scope::Scope,
         statement::FruStatement,
-        value::fru_value::FruValue,
-        value::function::{ArgumentList, EvaluatedArgumentList, FormalParameters, FruFunction},
+        value::{
+            fru_function::FruFunction,
+            fru_value::FruValue,
+            function_helpers::{ArgumentList, EvaluatedArgumentList, FormalParameters},
+        },
     },
-    stdlib::scope::fru_scope::{BScope, extract_scope_from_value},
+    stdlib::scope::fru_scope::{extract_scope_from_value, BScope, BTypeScope},
 };
-use crate::stdlib::scope::fru_scope::BTypeScope;
 
 #[derive(Debug, Clone)]
 pub enum FruExpression {
@@ -89,12 +90,13 @@ impl FruExpression {
 
             FruExpression::ScopeAccessor => Ok(BScope::new_value(scope)),
 
-            FruExpression::Function { args, body } => Ok(FruFunction {
-                parameters: args.clone(),
-                body: body.clone(),
-                scope: scope.clone(),
+            FruExpression::Function { args, body } => {
+                Ok(FruValue::Function(Rc::new(FruFunction {
+                    parameters: args.clone(),
+                    body: body.clone(),
+                    scope: scope.clone(),
+                })))
             }
-            .into()),
 
             FruExpression::Block { body, expr } => {
                 scope = Scope::new_with_parent(scope.clone());

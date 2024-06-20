@@ -1,4 +1,4 @@
-use std::{any::Any, fmt::Formatter, rc::Rc};
+use std::{any::Any, fmt::Debug, fmt::Formatter, rc::Rc};
 
 use uid::Id;
 
@@ -9,8 +9,7 @@ use crate::{
         scope::Scope,
         value::{
             fru_value::FruValue,
-            native::object::OfObject,
-            native::object::{INativeObject, NativeObject},
+            native_object::{INativeObject, NativeObject, OfObject},
         },
     },
     static_fru_value, static_uid,
@@ -51,12 +50,14 @@ impl INativeObject for BScope {
         Ok(())
     }
 
-    fn debug_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "scope")
-    }
-
     fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject> {
         self
+    }
+}
+
+impl Debug for BScope {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "scope")
     }
 }
 
@@ -87,11 +88,13 @@ impl INativeObject for BTypeScope {
         NativeObject::new_value(BTypeType)
     }
 
-    fn debug_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Scope")
-    }
-
     fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject> {
         self
+    }
+}
+
+impl Debug for BTypeScope {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Scope")
     }
 }

@@ -5,8 +5,11 @@ use std::{collections::HashMap, io, io::Write};
 use crate::interpreter::{
     error::FruError,
     identifier::Identifier,
-    value::fru_value::{FruValue, TFnBuiltin},
-    value::function::{AnyFunction, BuiltinFunction, EvaluatedArgumentList},
+    value::{
+        builtin_function::BuiltinFunction,
+        fru_value::{FruValue, TFnBuiltin},
+        function_helpers::EvaluatedArgumentList,
+    },
 };
 
 pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
@@ -19,7 +22,7 @@ pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
         .map(|(ident, function)| {
             (
                 Identifier::new(ident),
-                FruValue::Function(AnyFunction::BuiltinFunction(BuiltinFunction::new(function))),
+                FruValue::BuiltinFunction(BuiltinFunction::new(function)),
             )
         }),
     )

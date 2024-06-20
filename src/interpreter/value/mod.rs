@@ -1,6 +1,9 @@
+pub mod builtin_function;
+pub mod curried;
+pub mod fru_function;
 pub mod fru_object;
 pub mod fru_type;
 pub mod fru_value;
-pub mod function;
-pub mod native;
+pub mod function_helpers;
+pub mod native_object;
 pub mod operator;

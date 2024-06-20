@@ -2,7 +2,7 @@ use std::rc::Rc;
 
 use crate::interpreter::{
     expression::FruExpression, identifier::Identifier, statement::FruStatement,
-    value::function::FormalParameters,
+    value::function_helpers::FormalParameters,
 };
 
 #[derive(Debug, Clone)]

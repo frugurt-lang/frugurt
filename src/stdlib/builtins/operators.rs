@@ -4,8 +4,7 @@ use crate::{
     interpreter::{
         error::FruError,
         identifier::{id, OperatorIdentifier},
-        value::native::object::INativeObject,
-        value::{fru_value::FruValue, operator::AnyOperator},
+        value::{fru_value::FruValue, native_object::INativeObject, operator::AnyOperator},
     },
     stdlib::builtins::{b_bool::BTypeBool, b_number::BTypeNumber, b_string::BTypeString},
 };

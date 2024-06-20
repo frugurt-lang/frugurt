@@ -1,5 +1,4 @@
-use std::cmp::PartialEq;
-use std::{fmt::Debug, rc::Rc};
+use std::{cmp::PartialEq, fmt::Debug, rc::Rc};
 
 use uid::Id;
 
@@ -8,11 +7,13 @@ use crate::{
         error::FruError,
         identifier::Identifier,
         value::{
+            builtin_function::BuiltinFunction,
+            curried::Curried,
+            fru_function::FruFunction,
             fru_object::FruObject,
             fru_type::FruType,
-            function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
-            native::object::NativeObject,
-            native::object::OfObject,
+            function_helpers::EvaluatedArgumentList,
+            native_object::{NativeObject, OfObject},
         },
     },
     stdlib::builtins::{
@@ -32,8 +33,12 @@ pub enum FruValue {
     Bool(bool),
     String(String), // FIXME: not really primitive, more of a collection
 
-    // function
-    Function(AnyFunction),
+    // functions
+    Function(Rc<FruFunction>),
+    BuiltinFunction(BuiltinFunction),
+
+    // specials
+    Curried(Rc<Curried>),
 
     // oop
     Type(FruType),
@@ -49,6 +54,8 @@ impl FruValue {
             FruValue::Bool(_) => BTypeBool::get_value(),
             FruValue::String(_) => BTypeString::get_value(),
             FruValue::Function(_) => BTypeFunction::get_value(),
+            FruValue::BuiltinFunction(_) => BTypeFunction::get_value(),
+            FruValue::Curried(_) => BTypeFunction::get_value(),
             FruValue::Type(_) => BTypeNah::get_value(),
             FruValue::Object(obj) => obj.get_type(),
             FruValue::NativeObject(obj) => obj.get_type(),
@@ -68,6 +75,8 @@ impl FruValue {
     pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
             FruValue::Function(fun) => fun.call(args),
+            FruValue::BuiltinFunction(fun) => fun.call(args),
+            FruValue::Curried(fun) => fun.call(args),
             FruValue::NativeObject(obj) => obj.call(args),
             _ => FruError::new_res(format!("`{:?}` is not invokable", self.get_type())),
         }
@@ -75,30 +84,11 @@ impl FruValue {
 
     pub fn curry_call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
-            FruValue::Function(func) => {
-                match func {
-                    AnyFunction::CurriedFunction(func) => {
-                        let mut new_args = func.saved_args.clone(); // TODO: obsidian Issue 1
-                        new_args.args.extend(args.args);
+            FruValue::Curried(curried) => Ok(curried.curry_call(args)),
 
-                        Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
-                            CurriedFunction {
-                                saved_args: new_args,
-                                function: func.function.clone(),
-                            },
-                        ))))
-                    }
-
-                    normal => Ok(FruValue::Function(AnyFunction::CurriedFunction(Rc::new(
-                        CurriedFunction {
-                            saved_args: args,
-                            function: Rc::new(normal.clone()),
-                        },
-                    )))),
-                }
+            FruValue::Function(_) | FruValue::BuiltinFunction(_) | FruValue::NativeObject(_) => {
+                Ok(Curried::new_value(self.clone(), args))
             }
-
-            FruValue::NativeObject(obj) => obj.curry_call(args),
 
             _ => FruError::new_res(format!("`{:?}` is not invokable", self.get_type())),
         }
@@ -149,22 +139,16 @@ impl FruValue {
     }
 }
 
-impl From<FruFunction> for FruValue {
-    fn from(func: FruFunction) -> Self {
-        FruValue::Function(AnyFunction::Function(Rc::new(func)))
-    }
-}
-
 impl PartialEq for FruValue {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (FruValue::Nah, FruValue::Nah) => true,
-            (FruValue::Number(v1), FruValue::Number(v2)) => v1 == v2,
-            (FruValue::Bool(v1), FruValue::Bool(v2)) => v1 == v2,
-            (FruValue::String(v1), FruValue::String(v2)) => v1 == v2,
-            (FruValue::Type(v1), FruValue::Type(v2)) => v1 == v2,
-            (FruValue::Object(v1), FruValue::Object(v2)) => v1 == v2,
-            (FruValue::NativeObject(v1), FruValue::NativeObject(v2)) => v1 == v2,
+            (FruValue::Number(left), FruValue::Number(right)) => left == right,
+            (FruValue::Bool(left), FruValue::Bool(right)) => left == right,
+            (FruValue::String(left), FruValue::String(right)) => left == right,
+            (FruValue::Type(left), FruValue::Type(right)) => left == right,
+            (FruValue::Object(left), FruValue::Object(right)) => left == right,
+            (FruValue::NativeObject(left), FruValue::NativeObject(right)) => left == right,
             _ => false,
         }
     }
@@ -174,13 +158,15 @@ impl Debug for FruValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             FruValue::Nah => write!(f, "nah"),
-            FruValue::Number(v) => write!(f, "{}", v),
-            FruValue::Bool(v) => write!(f, "{}", v),
-            FruValue::String(v) => write!(f, "{}", v),
-            FruValue::Function(fun) => write!(f, "{:?}", fun),
-            FruValue::Type(type_) => write!(f, "{:?}", type_),
-            FruValue::Object(obj) => write!(f, "{:?}", obj),
-            FruValue::NativeObject(obj) => Debug::fmt(obj, f),
+            FruValue::Number(x) => write!(f, "{}", x),
+            FruValue::Bool(x) => write!(f, "{}", x),
+            FruValue::String(x) => write!(f, "{}", x),
+            FruValue::Function(x) => Debug::fmt(x, f),
+            FruValue::BuiltinFunction(x) => Debug::fmt(x, f),
+            FruValue::Curried(x) => Debug::fmt(x, f),
+            FruValue::Type(x) => Debug::fmt(x, f),
+            FruValue::Object(x) => Debug::fmt(x, f),
+            FruValue::NativeObject(x) => Debug::fmt(x, f),
         }
     }
 }

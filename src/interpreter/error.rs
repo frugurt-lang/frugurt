@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::interpreter::value::function::ArgumentError;
+use crate::interpreter::value::function_helpers::ArgumentError;
 
 #[derive(Debug, Error)]
 #[error("{message}")]

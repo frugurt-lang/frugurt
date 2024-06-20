@@ -8,8 +8,8 @@ use crate::interpreter::{
     identifier::Identifier,
     scope::Scope,
     value::{
-        fru_type::FruType, fru_type::TypeFlavor, fru_value::FruValue, function::FruFunction,
-        native::object::OfObject,
+        fru_function::FruFunction, fru_type::FruType, fru_type::TypeFlavor, fru_value::FruValue,
+        native_object::OfObject,
     },
 };
 
@@ -74,18 +74,12 @@ impl FruObject {
             };
         }
 
-        if let Some(FruFunction {
-            parameters: argument_idents,
-            body,
-            ..
-        }) = self.get_fru_type().get_method(ident)
-        {
-            return Ok(FruFunction {
-                parameters: argument_idents,
-                body,
+        if let Some(f) = self.get_fru_type().get_method(ident) {
+            return Ok(FruValue::Function(Rc::new(FruFunction {
+                parameters: f.parameters,
+                body: f.body,
                 scope: Scope::new_with_object(self.clone()),
-            }
-            .into());
+            })));
         }
 
         if let Ok(static_thing) = self.get_fru_type().get_prop(ident) {

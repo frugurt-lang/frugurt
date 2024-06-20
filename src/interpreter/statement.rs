@@ -1,19 +1,21 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::interpreter::{
-    ast_helpers::{RawMethod, RawStaticField},
-    control::Control,
-    expression::FruExpression,
-    identifier::{Identifier, OperatorIdentifier},
-    scope::Scope,
-    value::{
-        fru_type::{FruField, FruType, Property, TypeFlavor},
-        fru_value::FruValue,
-        function::FruFunction,
-        operator::AnyOperator,
+use crate::{
+    interpreter::{
+        ast_helpers::{RawMethod, RawStaticField},
+        control::Control,
+        expression::FruExpression,
+        identifier::{Identifier, OperatorIdentifier},
+        scope::Scope,
+        value::{
+            fru_function::FruFunction,
+            fru_type::{FruField, FruType, Property, TypeFlavor},
+            fru_value::FruValue,
+            operator::AnyOperator,
+        },
     },
+    stdlib::scope::fru_scope::{extract_scope_from_value, BTypeScope},
 };
-use crate::stdlib::scope::fru_scope::{extract_scope_from_value, BTypeScope};
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
