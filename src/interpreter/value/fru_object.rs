@@ -8,7 +8,7 @@ use crate::interpreter::{
     identifier::Identifier,
     scope::Scope,
     value::{
-        fru_type::FruType, fru_type::TypeType, fru_value::FruValue, function::FruFunction,
+        fru_type::FruType, fru_type::TypeFlavor, fru_value::FruValue, function::FruFunction,
         native::object::OfObject,
     },
 };
@@ -97,7 +97,7 @@ impl FruObject {
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if let Some(field_k) = self.get_fru_type().get_field_k(ident) {
-            if self.get_fru_type().get_type_type() == TypeType::Data {
+            if self.get_fru_type().get_type_flavor() == TypeFlavor::Data {
                 return FruError::new_res(format!(
                     "cannot set field `{}` in 'data' type `{:?}`",
                     ident,
@@ -133,15 +133,15 @@ impl FruObject {
     }
 
     pub fn fru_clone(&self) -> FruValue {
-        let tt = self.get_fru_type().get_type_type();
+        let tt = self.get_fru_type().get_type_flavor();
 
         match tt {
-            TypeType::Struct => FruObject::new_object(
+            TypeFlavor::Struct => FruObject::new_object(
                 self.get_fru_type(),
                 self.internal.fields.borrow().iter().map(FruValue::fru_clone).collect(),
             ),
 
-            TypeType::Class | TypeType::Data => FruValue::Object(self.clone()),
+            TypeFlavor::Class | TypeFlavor::Data => FruValue::Object(self.clone()),
         }
     }
 }

@@ -13,7 +13,7 @@ use crate::interpreter::{
     identifier::Identifier,
     statement::FruStatement,
     value::{
-        fru_type::{FruField, Property, TypeType},
+        fru_type::{FruField, Property, TypeFlavor},
         fru_value::FruValue,
         function::{ArgumentList, FormalParameters},
     },
@@ -295,14 +295,14 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
         }
 
         "type_statement" => {
-            let type_type = match ast.get_child_text("type_type")? {
-                "struct" => TypeType::Struct,
-                "class" => TypeType::Class,
-                "data" => TypeType::Data,
+            let type_flavor = match ast.get_child_text("type_flavor")? {
+                "struct" => TypeFlavor::Struct,
+                "class" => TypeFlavor::Class,
+                "data" => TypeFlavor::Data,
                 _ => {
                     return Err(ParseError::InvalidAst {
-                        position: ast.get_child("type_type")?.range(),
-                        error: format!("Invalid type type: {}", ast.get_child_text("type_type")?),
+                        position: ast.get_child("type_flavor")?.range(),
+                        error: format!("Invalid type flavor: {}", ast.get_child_text("type_flavor")?),
                     });
                 }
             };
@@ -351,7 +351,7 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             let methods = ast.parse_optional_child("impl", parse_impl)?.unwrap_or_else(Vec::new);
 
             FruStatement::Type {
-                type_type,
+                type_flavor,
                 ident,
                 fields,
                 static_fields,

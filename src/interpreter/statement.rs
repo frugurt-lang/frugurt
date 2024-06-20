@@ -7,7 +7,7 @@ use crate::interpreter::{
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
     value::{
-        fru_type::{FruField, FruType, Property, TypeType},
+        fru_type::{FruField, FruType, Property, TypeFlavor},
         fru_value::FruValue,
         function::FruFunction,
         operator::AnyOperator,
@@ -67,7 +67,7 @@ pub enum FruStatement {
         body: Rc<FruStatement>,
     },
     Type {
-        type_type: TypeType,
+        type_flavor: TypeFlavor,
         ident: Identifier,
         fields: Vec<FruField>,
         static_fields: Vec<RawStaticField>,
@@ -226,7 +226,7 @@ impl FruStatement {
             }
 
             FruStatement::Type {
-                type_type,
+                type_flavor,
                 ident,
                 fields,
                 static_fields,
@@ -265,7 +265,7 @@ impl FruStatement {
                     *ident,
                     FruType::new_value(
                         *ident,
-                        *type_type,
+                        *type_flavor,
                         fields.clone(),
                         RefCell::new(static_fields_evaluated),
                         properties.clone(),

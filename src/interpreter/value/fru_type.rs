@@ -26,7 +26,7 @@ pub struct FruType {
 #[derive(Clone)]
 pub struct FruTypeInternal {
     ident: Identifier,
-    type_type: TypeType,
+    type_flavor: TypeFlavor,
     fields: Vec<FruField>,
     static_fields: RefCell<HashMap<Identifier, FruValue>>,
     // TODO: change for FruField?
@@ -53,8 +53,7 @@ pub struct Property {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TypeType {
-    // TODO: rename to smth like TypeKind
+pub enum TypeFlavor {
     Struct,
     Class,
     Data,
@@ -63,7 +62,7 @@ pub enum TypeType {
 impl FruType {
     pub fn new_value(
         ident: Identifier,
-        type_type: TypeType,
+        type_flavor: TypeFlavor,
         fields: Vec<FruField>,
         static_fields: RefCell<HashMap<Identifier, FruValue>>,
         properties: HashMap<Identifier, Property>,
@@ -75,7 +74,7 @@ impl FruType {
         FruValue::Type(Self {
             internal: FruTypeInternal {
                 ident,
-                type_type,
+                type_flavor,
                 fields,
                 static_fields,
                 properties,
@@ -97,8 +96,8 @@ impl FruType {
         self.internal.ident
     }
 
-    pub fn get_type_type(&self) -> TypeType {
-        self.internal.type_type
+    pub fn get_type_flavor(&self) -> TypeFlavor {
+        self.internal.type_flavor
     }
 
     pub fn get_scope(&self) -> Rc<Scope> {
