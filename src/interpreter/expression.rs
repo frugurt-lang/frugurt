@@ -1,15 +1,19 @@
 use std::{path::PathBuf, rc::Rc};
 
-use crate::interpreter::{
-    control::Control,
-    identifier::{Identifier, OperatorIdentifier},
-    runner,
-    scope::Scope,
-    statement::FruStatement,
-    value::fru_value::FruValue,
-    value::function::{ArgumentList, EvaluatedArgumentList, FormalParameters, FruFunction},
+use crate::{
+    interpreter::{
+        control::Control,
+        identifier::Identifier,
+        identifier::OperatorIdentifier,
+        runner,
+        scope::Scope,
+        statement::FruStatement,
+        value::fru_value::FruValue,
+        value::function::{ArgumentList, EvaluatedArgumentList, FormalParameters, FruFunction},
+    },
+    stdlib::scope::fru_scope::{BScope, extract_scope_from_value},
 };
-use crate::stdlib::scope::fru_scope::{extract_scope_from_value, FruScope};
+use crate::stdlib::scope::fru_scope::BTypeScope;
 
 #[derive(Debug, Clone)]
 pub enum FruExpression {
@@ -83,7 +87,7 @@ impl FruExpression {
 
             FruExpression::Variable { ident } => Ok(scope.get_variable(*ident)?),
 
-            FruExpression::ScopeAccessor => Ok(FruScope::new_value(scope)),
+            FruExpression::ScopeAccessor => Ok(BScope::new_value(scope)),
 
             FruExpression::Function { args, body } => Ok(FruFunction {
                 parameters: args.clone(),
@@ -101,17 +105,17 @@ impl FruExpression {
 
                 expr.evaluate(scope)
             }
+
             FruExpression::ScopeModifier { what, body, expr } => {
                 let what = what.evaluate(scope)?;
-                let new_scope = match extract_scope_from_value(&what) {
-                    Some(x) => x,
-                    None => {
-                        return Control::new_err(format!(
-                            "Expected `Scope` in scope modifier expression, got `{}`",
-                            what.get_type_identifier()
-                        ))
-                    }
-                };
+                if what.get_type() != BTypeScope::get_value() {
+                    return Control::new_err(format!(
+                        "Expected `Scope` in scope modifier expression, got `{:?}`",
+                        what.get_type()
+                    ));
+                }
+
+                let new_scope = extract_scope_from_value(&what).expect("scope");
 
                 for statement in body {
                     statement.execute(new_scope.clone())?;
@@ -157,11 +161,16 @@ impl FruExpression {
             } => {
                 let left_val = left.evaluate(scope.clone())?;
                 let right_val = right.evaluate(scope.clone())?;
-                let type_left = left_val.get_type_identifier();
-                let type_right = right_val.get_type_identifier();
+                let type_left = left_val.get_type();
+                let type_right = right_val.get_type();
 
                 let op = scope
-                    .get_operator(OperatorIdentifier::new(*operator, type_left, type_right))?;
+                    .get_operator(OperatorIdentifier::new(
+                        *operator,
+                        type_left.get_uid(),
+                        type_right.get_uid(),
+                    ))
+                    .map_err(|x| x.into_error(type_left, type_right))?;
 
                 Ok(op.operate(left_val, right_val)?)
             }
@@ -180,8 +189,8 @@ impl FruExpression {
                 }
 
                 unexpected => Control::new_err(format!(
-                    "Expected `Bool` in if condition, got `{}`",
-                    unexpected.get_type_identifier()
+                    "Expected `Bool` in if condition, got `{:?}`",
+                    unexpected.get_type()
                 )),
             },
 
@@ -193,8 +202,8 @@ impl FruExpression {
 
                     _ => {
                         return Control::new_err(format!(
-                            "Expected `String` in import path, got `{}`",
-                            path.get_type_identifier()
+                            "Expected `String` in import path, got `{:?}`",
+                            path.get_type()
                         ))
                     }
                 };
@@ -203,7 +212,7 @@ impl FruExpression {
 
                 let result_scope = runner::execute_file(&path)?;
 
-                Ok(FruScope::new_value(result_scope))
+                Ok(BScope::new_value(result_scope))
             }
         }
     }

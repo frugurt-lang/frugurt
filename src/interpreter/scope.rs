@@ -1,21 +1,24 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
+use uid::Id;
+
 use crate::{
     interpreter::{
         error::FruError,
         identifier::{Identifier, OperatorIdentifier},
-        value::fru_object::FruObject,
-        value::fru_type::FruType,
-        value::fru_value::FruValue,
-        value::operator::AnyOperator,
+        value::{
+            fru_object::FruObject, fru_type::FruType, fru_value::FruValue,
+            native::object::OfObject, operator::AnyOperator,
+        },
     },
-    stdlib::builtins::{functions, operators},
+    stdlib::builtins::{operators::builtin_operators, variables::builtin_variables},
 };
 
 pub struct Scope {
     variables: RefCell<HashMap<Identifier, FruValue>>,
     operators: RefCell<HashMap<OperatorIdentifier, AnyOperator>>,
     parent: ScopeAncestor,
+    pub uid: Id<OfObject>,
 }
 
 enum ScopeAncestor {
@@ -31,12 +34,17 @@ enum ScopeAncestor {
     },
 }
 
+pub struct OperatorDoesNotExistError {
+    op_ident: Identifier,
+}
+
 impl Scope {
     pub fn new_global() -> Rc<Scope> {
         Rc::new(Scope {
-            variables: RefCell::new(functions::builtin_functions()),
-            operators: RefCell::new(operators::builtin_operators()),
+            variables: RefCell::new(builtin_variables()),
+            operators: RefCell::new(builtin_operators()),
             parent: ScopeAncestor::None,
+            uid: Id::new(),
         })
     }
 
@@ -45,16 +53,18 @@ impl Scope {
             variables: RefCell::new(HashMap::new()),
             operators: RefCell::new(HashMap::new()),
             parent: ScopeAncestor::Parent(parent),
+            uid: Id::new(),
         })
     }
 
     pub fn new_with_object(object: FruObject) -> Rc<Scope> {
-        let parent = object.get_type().get_scope();
+        let parent = object.get_fru_type().get_scope();
 
         Rc::new(Scope {
             variables: RefCell::new(HashMap::new()),
             operators: RefCell::new(HashMap::new()),
             parent: ScopeAncestor::Object { object, parent },
+            uid: Id::new(),
         })
     }
 
@@ -65,6 +75,7 @@ impl Scope {
             variables: RefCell::new(HashMap::new()),
             operators: RefCell::new(HashMap::new()),
             parent: ScopeAncestor::Type { type_, parent },
+            uid: Id::new(),
         })
     }
 
@@ -94,15 +105,15 @@ impl Scope {
         }
     }
 
-    pub fn get_operator(&self, ident: OperatorIdentifier) -> Result<AnyOperator, FruError> {
+    pub fn get_operator(
+        &self,
+        ident: OperatorIdentifier,
+    ) -> Result<AnyOperator, OperatorDoesNotExistError> {
         if let Some(op) = self.operators.borrow().get(&ident) {
             Ok(op.clone())
         } else {
             match &self.parent {
-                ScopeAncestor::None => Err(FruError::new(format!(
-                    "operator `{:?}` does not exist",
-                    ident
-                ))),
+                ScopeAncestor::None => Err(OperatorDoesNotExistError { op_ident: ident.op }),
                 ScopeAncestor::Parent(parent)
                 | ScopeAncestor::Object { parent, .. }
                 | ScopeAncestor::Type { parent, .. } => parent.get_operator(ident),
@@ -155,5 +166,14 @@ impl ScopeAncestor {
                 .set_prop(ident, value.clone())
                 .or_else(|_| parent.set_variable(ident, value)),
         }
+    }
+}
+
+impl OperatorDoesNotExistError {
+    pub fn into_error(self, left_type: FruValue, right_type: FruValue) -> FruError {
+        FruError::new(format!(
+            "operator `{:?}` between `{:?}` and `{:?}` does not exist",
+            self.op_ident, left_type, right_type
+        ))
     }
 }

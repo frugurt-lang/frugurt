@@ -6,6 +6,9 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
+use uid::Id;
+
+use crate::interpreter::value::native::object::OfObject;
 
 // this map is used for Identifier visualization
 static BACKWARDS_MAP: Lazy<Mutex<HashMap<u64, String>>> = Lazy::new(Default::default);
@@ -16,11 +19,11 @@ pub struct Identifier {
     hashed_ident: u64,
 }
 
-#[derive(Hash, PartialEq, Eq, Copy, Clone, PartialOrd, Ord)]
+#[derive(Hash, PartialEq, Eq, Copy, Clone)]
 pub struct OperatorIdentifier {
-    op: Identifier,
-    left: Identifier,
-    right: Identifier,
+    pub op: Identifier,
+    left: Id<OfObject>,
+    right: Id<OfObject>,
 }
 
 impl Identifier {
@@ -44,7 +47,7 @@ impl Identifier {
 }
 
 impl OperatorIdentifier {
-    pub fn new(op: Identifier, left: Identifier, right: Identifier) -> Self {
+    pub fn new(op: Identifier, left: Id<OfObject>, right: Id<OfObject>) -> Self {
         Self { op, left, right }
     }
 }
@@ -65,25 +68,10 @@ impl Display for Identifier {
     }
 }
 
-impl Debug for OperatorIdentifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Operator({} {} {})", self.left, self.op, self.right)
-    }
-}
-
 pub mod id {
     use macros::static_ident;
 
     use crate::interpreter::identifier::Identifier;
-
-    // types
-    pub const NAH: Identifier = static_ident!("Nah");
-    pub const NUMBER: Identifier = static_ident!("Number");
-    pub const BOOL: Identifier = static_ident!("Bool");
-    pub const STRING: Identifier = static_ident!("String");
-    pub const FUNCTION: Identifier = static_ident!("Function");
-    pub const TYPE: Identifier = static_ident!("Type");
-    pub const NATIVE_OBJECT: Identifier = static_ident!("NativeObject");
 
     // arithmetic
     pub const PLUS: Identifier = static_ident!("+");

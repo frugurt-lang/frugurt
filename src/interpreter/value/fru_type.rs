@@ -1,5 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
+use uid::Id;
+
 use crate::interpreter::{
     control::{returned, returned_nothing},
     error::FruError,
@@ -8,9 +10,12 @@ use crate::interpreter::{
     identifier::Identifier,
     scope::Scope,
     statement::FruStatement,
-    value::fru_object::FruObject,
-    value::fru_value::FruValue,
-    value::function::{EvaluatedArgumentList, FruFunction},
+    value::{
+        fru_object::FruObject,
+        fru_value::FruValue,
+        function::{EvaluatedArgumentList, FruFunction},
+        native::object::OfObject,
+    },
 };
 
 #[derive(Clone)]
@@ -30,6 +35,7 @@ pub struct FruTypeInternal {
     methods: HashMap<Identifier, FruFunction>,
     static_methods: HashMap<Identifier, FruFunction>,
     scope: Rc<Scope>,
+    uid: Id<OfObject>,
 }
 
 #[derive(Clone)]
@@ -48,6 +54,7 @@ pub struct Property {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TypeType {
+    // TODO: rename to smth like TypeKind
     Struct,
     Class,
     Data,
@@ -76,9 +83,14 @@ impl FruType {
                 static_methods,
                 static_properties,
                 scope,
+                uid: Id::new(),
             }
             .wrap_rc(),
         })
+    }
+
+    pub fn get_uid(&self) -> Id<OfObject> {
+        self.internal.uid
     }
 
     pub fn get_ident(&self) -> Identifier {

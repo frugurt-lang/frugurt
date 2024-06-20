@@ -1,14 +1,16 @@
 use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
+use uid::Id;
+
 use crate::interpreter::{
     control::{returned, returned_nothing},
     error::FruError,
     identifier::Identifier,
     scope::Scope,
-    value::fru_type::FruType,
-    value::fru_type::TypeType,
-    value::fru_value::FruValue,
-    value::function::FruFunction,
+    value::{
+        fru_type::FruType, fru_type::TypeType, fru_value::FruValue, function::FruFunction,
+        native::object::OfObject,
+    },
 };
 
 #[derive(Clone)]
@@ -19,6 +21,7 @@ pub struct FruObject {
 pub struct FruObjectInternal {
     type_: FruType,
     fields: RefCell<Vec<FruValue>>,
+    uid: Id<OfObject>,
 }
 
 impl FruObject {
@@ -27,6 +30,7 @@ impl FruObject {
             internal: Rc::new(FruObjectInternal {
                 type_,
                 fields: RefCell::new(fields),
+                uid: Id::new(),
             }),
         }
     }
@@ -35,7 +39,15 @@ impl FruObject {
         FruValue::Object(FruObject::new(type_, fields))
     }
 
-    pub fn get_type(&self) -> FruType {
+    pub fn get_type(&self) -> FruValue {
+        FruValue::Type(self.get_fru_type())
+    }
+
+    pub fn get_uid(&self) -> Id<OfObject> {
+        self.internal.uid
+    }
+
+    pub fn get_fru_type(&self) -> FruType {
         self.internal.type_.clone()
     }
 
@@ -48,11 +60,11 @@ impl FruObject {
     }
 
     pub fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
-        if let Some(k) = self.get_type().get_field_k(ident) {
+        if let Some(k) = self.get_fru_type().get_field_k(ident) {
             return Ok(self.get_kth_field(k));
         }
 
-        if let Some(property) = self.get_type().get_property(ident) {
+        if let Some(property) = self.get_fru_type().get_property(ident) {
             let new_scope = Scope::new_with_object(self.clone());
 
             return match property.getter {
@@ -66,7 +78,7 @@ impl FruObject {
             parameters: argument_idents,
             body,
             ..
-        }) = self.get_type().get_method(ident)
+        }) = self.get_fru_type().get_method(ident)
         {
             return Ok(FruFunction {
                 parameters: argument_idents,
@@ -76,7 +88,7 @@ impl FruObject {
             .into());
         }
 
-        if let Ok(static_thing) = self.get_type().get_prop(ident) {
+        if let Ok(static_thing) = self.get_fru_type().get_prop(ident) {
             return Ok(static_thing);
         }
 
@@ -84,12 +96,12 @@ impl FruObject {
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
-        if let Some(field_k) = self.get_type().get_field_k(ident) {
-            if self.get_type().get_type_type() == TypeType::Data {
+        if let Some(field_k) = self.get_fru_type().get_field_k(ident) {
+            if self.get_fru_type().get_type_type() == TypeType::Data {
                 return FruError::new_res(format!(
-                    "cannot set field `{}` in 'data' type `{}`",
+                    "cannot set field `{}` in 'data' type `{:?}`",
                     ident,
-                    value.get_type_identifier()
+                    value.get_type()
                 ));
             }
 
@@ -97,7 +109,7 @@ impl FruObject {
             return Ok(());
         }
 
-        if let Some(property) = self.get_type().get_property(ident) {
+        if let Some(property) = self.get_fru_type().get_property(ident) {
             return if let Some((ident, setter)) = property.setter {
                 let new_scope = Scope::new_with_object(self.clone());
 
@@ -109,23 +121,23 @@ impl FruObject {
             };
         }
 
-        if let Ok(()) = self.get_type().set_prop(ident, value) {
+        if let Ok(()) = self.get_fru_type().set_prop(ident, value) {
             return Ok(());
         }
 
         FruError::new_res(format!(
             "prop `{}` does not exist in struct `{}`",
             ident,
-            self.get_type().get_ident()
+            self.get_fru_type().get_ident()
         ))
     }
 
     pub fn fru_clone(&self) -> FruValue {
-        let tt = self.get_type().get_type_type();
+        let tt = self.get_fru_type().get_type_type();
 
         match tt {
             TypeType::Struct => FruObject::new_object(
-                self.get_type(),
+                self.get_fru_type(),
                 self.internal.fields.borrow().iter().map(FruValue::fru_clone).collect(),
             ),
 
@@ -136,7 +148,7 @@ impl FruObject {
 
 impl PartialEq for FruObject {
     fn eq(&self, other: &Self) -> bool {
-        if self.get_type() != other.get_type() {
+        if self.get_fru_type() != other.get_fru_type() {
             return false;
         }
 
@@ -146,12 +158,12 @@ impl PartialEq for FruObject {
 
 impl Debug for FruObject {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}{{", self.get_type())?;
+        write!(f, "{:?}{{", self.get_fru_type())?;
 
-        let fields = self.get_type().get_fields().len();
+        let fields = self.get_fru_type().get_fields().len();
 
         for (k, (field, value)) in self
-            .get_type()
+            .get_fru_type()
             .get_fields()
             .iter()
             .zip(self.internal.fields.borrow().iter())

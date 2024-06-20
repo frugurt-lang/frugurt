@@ -1,14 +1,23 @@
+use std::cmp::PartialEq;
 use std::{fmt::Debug, rc::Rc};
 
-use crate::interpreter::{
-    error::FruError,
-    identifier::id,
-    identifier::Identifier,
-    value::{
-        fru_object::FruObject,
-        fru_type::FruType,
-        function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
-        native::object::NativeObject,
+use uid::Id;
+
+use crate::{
+    interpreter::{
+        error::FruError,
+        identifier::Identifier,
+        value::{
+            fru_object::FruObject,
+            fru_type::FruType,
+            function::{AnyFunction, CurriedFunction, EvaluatedArgumentList, FruFunction},
+            native::object::NativeObject,
+            native::object::OfObject,
+        },
+    },
+    stdlib::builtins::{
+        b_bool::BTypeBool, b_function::BTypeFunction, b_nah::BTypeNah, b_number::BTypeNumber,
+        b_string::BTypeString,
     },
 };
 
@@ -21,7 +30,7 @@ pub enum FruValue {
     Nah,
     Number(f64),
     Bool(bool),
-    String(String),
+    String(String), // FIXME: not really primitive, more of a collection
 
     // function
     Function(AnyFunction),
@@ -33,16 +42,26 @@ pub enum FruValue {
 }
 
 impl FruValue {
-    pub fn get_type_identifier(&self) -> Identifier {
+    pub fn get_type(&self) -> FruValue {
         match self {
-            FruValue::Nah => id::NAH,
-            FruValue::Number(_) => id::NUMBER,
-            FruValue::Bool(_) => id::BOOL,
-            FruValue::String(_) => id::STRING,
-            FruValue::Function(_) => id::FUNCTION,
-            FruValue::Type(_) => id::TYPE,
-            FruValue::Object(obj) => obj.get_type().get_ident(),
-            FruValue::NativeObject(obj) => obj.get_type_identifier(),
+            FruValue::Nah => BTypeNah::get_value(),
+            FruValue::Number(_) => BTypeNumber::get_value(),
+            FruValue::Bool(_) => BTypeBool::get_value(),
+            FruValue::String(_) => BTypeString::get_value(),
+            FruValue::Function(_) => BTypeFunction::get_value(),
+            FruValue::Type(_) => BTypeNah::get_value(),
+            FruValue::Object(obj) => obj.get_type(),
+            FruValue::NativeObject(obj) => obj.get_type(),
+        }
+    }
+
+    pub fn get_uid(&self) -> Id<OfObject> {
+        match self {
+            FruValue::Type(obj) => obj.get_uid(),
+            FruValue::Object(obj) => obj.get_uid(),
+            FruValue::NativeObject(obj) => obj.get_uid(),
+
+            _ => panic!(),
         }
     }
 
@@ -50,7 +69,7 @@ impl FruValue {
         match self {
             FruValue::Function(fun) => fun.call(args),
             FruValue::NativeObject(obj) => obj.call(args),
-            _ => FruError::new_res(format!("`{}` is not invokable", self.get_type_identifier())),
+            _ => FruError::new_res(format!("`{:?}` is not invokable", self.get_type())),
         }
     }
 
@@ -81,7 +100,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.curry_call(args),
 
-            _ => FruError::new_res(format!("`{}` is not invokable", self.get_type_identifier())),
+            _ => FruError::new_res(format!("`{:?}` is not invokable", self.get_type())),
         }
     }
 
@@ -91,10 +110,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.instantiate(args),
 
-            _ => FruError::new_res(format!(
-                "`{}` is not instantiatable",
-                self.get_type_identifier()
-            )),
+            _ => FruError::new_res(format!("`{:?}` is not instantiatable", self.get_type())),
         }
     }
 
@@ -106,10 +122,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.get_prop(ident),
 
-            _ => FruError::new_res(format!(
-                "cannot access prop of `{}`",
-                self.get_type_identifier()
-            )),
+            _ => FruError::new_res(format!("cannot access prop of `{:?}`", self.get_type())),
         }
     }
 
@@ -121,10 +134,7 @@ impl FruValue {
 
             FruValue::NativeObject(obj) => obj.set_prop(ident, value),
 
-            _ => FruError::new_res(format!(
-                "cannot set prop of `{}`",
-                self.get_type_identifier()
-            )),
+            _ => FruError::new_res(format!("cannot set prop of `{:?}`", self.get_type())),
         }
     }
 
@@ -154,6 +164,7 @@ impl PartialEq for FruValue {
             (FruValue::String(v1), FruValue::String(v2)) => v1 == v2,
             (FruValue::Type(v1), FruValue::Type(v2)) => v1 == v2,
             (FruValue::Object(v1), FruValue::Object(v2)) => v1 == v2,
+            (FruValue::NativeObject(v1), FruValue::NativeObject(v2)) => v1 == v2,
             _ => false,
         }
     }
@@ -169,7 +180,12 @@ impl Debug for FruValue {
             FruValue::Function(fun) => write!(f, "{:?}", fun),
             FruValue::Type(type_) => write!(f, "{:?}", type_),
             FruValue::Object(obj) => write!(f, "{:?}", obj),
-            FruValue::NativeObject(obj) => write!(f, "{}{{}}", obj.get_type_identifier()),
+            FruValue::NativeObject(obj) => Debug::fmt(obj, f),
         }
     }
 }
+
+// interpreter is single threaded, so should be okay
+unsafe impl Sync for FruValue {}
+
+unsafe impl Send for FruValue {}

@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
-use crate::interpreter::{
-    error::FruError,
-    identifier::{id, OperatorIdentifier},
-    value::{fru_value::FruValue, operator::AnyOperator},
+use crate::{
+    interpreter::{
+        error::FruError,
+        identifier::{id, OperatorIdentifier},
+        value::native::object::INativeObject,
+        value::{fru_value::FruValue, operator::AnyOperator},
+    },
+    stdlib::builtins::{b_bool::BTypeBool, b_number::BTypeNumber, b_string::BTypeString},
 };
 
 macro_rules! builtin_operator {
@@ -19,11 +23,11 @@ macro_rules! builtin_operator {
 }
 
 macro_rules! operator_group {
-    ($ident1:ident, $ident2:ident, [$(($op:ident, $fn_name:ident)),*]) => {
+    ($left_ident:expr, $right_ident:expr, [$(($op:ident, $fn_name:ident)),*]) => {
         [
             $(
                 (
-                    OperatorIdentifier::new(id::$op, id::$ident1, id::$ident2),
+                    OperatorIdentifier::new(id::$op, $left_ident, $right_ident),
                     AnyOperator::BuiltinOperator($fn_name),
                 )
             ),*
@@ -35,8 +39,8 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
     let mut res = HashMap::new();
 
     res.extend(operator_group!(
-        NUMBER,
-        NUMBER,
+        BTypeNumber.get_uid(),
+        BTypeNumber.get_uid(),
         [
             (PLUS, num_plus_num),
             (MINUS, num_minus_num),
@@ -54,14 +58,14 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
     ));
 
     res.extend(operator_group!(
-        BOOL,
-        BOOL,
+        BTypeBool.get_uid(),
+        BTypeBool.get_uid(),
         [(AND, bool_and_bool), (OR, bool_or_bool)]
     ));
 
     res.extend(operator_group!(
-        STRING,
-        STRING,
+        BTypeString.get_uid(),
+        BTypeString.get_uid(),
         [
             (COMBINE, string_concat),
             (LESS, string_less_string),
@@ -75,11 +79,11 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
 
     res.extend([
         (
-            OperatorIdentifier::new(id::MULTIPLY, id::STRING, id::NUMBER),
+            OperatorIdentifier::new(id::MULTIPLY, BTypeString.get_uid(), BTypeNumber.get_uid()),
             AnyOperator::BuiltinOperator(string_mul_num),
         ),
         (
-            OperatorIdentifier::new(id::MULTIPLY, id::NUMBER, id::STRING),
+            OperatorIdentifier::new(id::MULTIPLY, BTypeNumber.get_uid(), BTypeString.get_uid()),
             AnyOperator::BuiltinOperator(num_mul_string),
         ),
     ]);

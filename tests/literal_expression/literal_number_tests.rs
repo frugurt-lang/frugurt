@@ -57,7 +57,7 @@ fn test_mod_by_zero() {
 }
 
 #[test]
-#[should_panic(expected = "operator `Operator(Number +++ Number)` does not exist")]
+#[should_panic(expected = "operator `+++` between `Number` and `Number` does not exist")]
 fn test_unknown_operator() {
     run(r#"
             4 +++ 6;

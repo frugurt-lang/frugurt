@@ -1,2 +1,9 @@
+pub mod b_bool;
+pub mod b_function;
+pub mod b_nah;
+pub mod b_number;
+pub mod b_string;
+pub mod b_type;
 pub mod functions;
 pub mod operators;
+pub mod variables;

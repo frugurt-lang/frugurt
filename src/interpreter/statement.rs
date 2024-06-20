@@ -6,12 +6,14 @@ use crate::interpreter::{
     expression::FruExpression,
     identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
-    value::fru_type::{FruField, FruType, Property, TypeType},
-    value::fru_value::FruValue,
-    value::function::FruFunction,
-    value::operator::AnyOperator,
+    value::{
+        fru_type::{FruField, FruType, Property, TypeType},
+        fru_value::FruValue,
+        function::FruFunction,
+        operator::AnyOperator,
+    },
 };
-use crate::stdlib::scope::fru_scope::extract_scope_from_value;
+use crate::stdlib::scope::fru_scope::{extract_scope_from_value, BTypeScope};
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
@@ -94,15 +96,14 @@ impl FruStatement {
 
             FruStatement::ScopeModifier { what, body } => {
                 let what = what.evaluate(scope)?;
-                let new_scope = match extract_scope_from_value(&what) {
-                    Some(x) => x,
-                    None => {
-                        return Control::new_err(format!(
-                            "Expected `Scope` in scope modifier statement, got `{}`",
-                            what.get_type_identifier()
-                        ))
-                    }
-                };
+                if what.get_type() != BTypeScope::get_value() {
+                    return Control::new_err(format!(
+                        "Expected `Scope` in scope modifier statement, got `{:?}`",
+                        what.get_type()
+                    ));
+                }
+
+                let new_scope = extract_scope_from_value(&what).expect("scope");
 
                 for statement in body {
                     statement.execute(new_scope.clone())?;
@@ -149,8 +150,8 @@ impl FruStatement {
 
                     _ => {
                         return Control::new_err(format!(
-                            "Expected `Bool` in if condition, got `{}`",
-                            result.get_type_identifier()
+                            "Expected `Bool` in if condition, got `{:?}`",
+                            result.get_type()
                         ));
                     }
                 }
@@ -162,8 +163,8 @@ impl FruStatement {
                         FruValue::Bool(b) => b,
                         other => {
                             return Control::new_err(format!(
-                                "Expected `Bool` in while condition, got `{}`",
-                                other.get_type_identifier()
+                                "Expected `Bool` in while condition, got `{:?}`",
+                                other.get_type()
                             ));
                         }
                     }
@@ -198,21 +199,23 @@ impl FruStatement {
                 right_type_ident,
                 body,
             } => {
+                let left_type = scope.get_variable(*left_type_ident)?.get_uid();
+                let right_type = scope.get_variable(*right_type_ident)?.get_uid();
+
                 if *commutative {
                     scope.set_operator(
-                        OperatorIdentifier::new(*ident, *right_type_ident, *left_type_ident),
+                        OperatorIdentifier::new(*ident, right_type, left_type),
                         AnyOperator::Operator {
                             left_ident: *right_ident,
                             right_ident: *left_ident,
                             body: body.clone(),
                             scope: scope.clone(),
-                        }
-                        .clone(),
+                        },
                     );
                 }
 
                 scope.set_operator(
-                    OperatorIdentifier::new(*ident, *left_type_ident, *right_type_ident),
+                    OperatorIdentifier::new(*ident, left_type, right_type),
                     AnyOperator::Operator {
                         left_ident: *left_ident,
                         right_ident: *right_ident,
