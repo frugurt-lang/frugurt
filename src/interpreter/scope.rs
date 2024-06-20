@@ -1,14 +1,15 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::interpreter::{
-    builtins::functions,
-    builtins::operators,
-    error::FruError,
-    identifier::{Identifier, OperatorIdentifier},
-    value::fru_object::FruObject,
-    value::fru_type::FruType,
-    value::fru_value::FruValue,
-    value::operator::AnyOperator,
+use crate::{
+    interpreter::{
+        error::FruError,
+        identifier::{Identifier, OperatorIdentifier},
+        value::fru_object::FruObject,
+        value::fru_type::FruType,
+        value::fru_value::FruValue,
+        value::operator::AnyOperator,
+    },
+    stdlib::builtins::{functions, operators},
 };
 
 pub struct Scope {
