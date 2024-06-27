@@ -1,5 +1,5 @@
 [package]
-name = "macros"
+name = "frugurt-macros"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,3 +9,4 @@ proc-macro = true
 [dependencies]
 syn = "2.0.66"
 quote = "1.0.36"
+proc-macro2 = "1.0.85"

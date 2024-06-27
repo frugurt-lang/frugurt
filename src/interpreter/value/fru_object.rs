@@ -151,7 +151,7 @@ impl PartialEq for FruObject {
 }
 
 impl Debug for FruObject {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{:?}{{", self.get_fru_type())?;
 
         let fields = self.get_fru_type().get_fields().len();

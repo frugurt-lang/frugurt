@@ -14,7 +14,9 @@ use crate::{
             operator::AnyOperator,
         },
     },
-    stdlib::scope::fru_scope::{extract_scope_from_value, BTypeScope},
+    stdlib::builtins::{
+        builtin_scope_instance::extract_scope_from_value, builtin_scope_type::BuiltinScopeType,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -98,7 +100,7 @@ impl FruStatement {
 
             FruStatement::ScopeModifier { what, body } => {
                 let what = what.evaluate(scope)?;
-                if what.get_type() != BTypeScope::get_value() {
+                if what.get_type() != BuiltinScopeType::get_value() {
                     return Control::new_err(format!(
                         "Expected `Scope` in scope modifier statement, got `{:?}`",
                         what.get_type()

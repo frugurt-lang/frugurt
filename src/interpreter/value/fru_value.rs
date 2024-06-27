@@ -17,8 +17,8 @@ use crate::{
         },
     },
     stdlib::builtins::{
-        b_bool::BTypeBool, b_function::BTypeFunction, b_nah::BTypeNah, b_number::BTypeNumber,
-        b_string::BTypeString,
+        builtin_bool_type::BuiltinBoolType, builtin_function_type::BuiltinFunctionType,
+        builtin_nah_type::BuiltinNahType, builtin_number_type::BuiltinNumberType,
     },
 };
 
@@ -31,7 +31,6 @@ pub enum FruValue {
     Nah,
     Number(f64),
     Bool(bool),
-    String(String), // FIXME: not really primitive, more of a collection
 
     // functions
     Function(Rc<FruFunction>),
@@ -49,14 +48,13 @@ pub enum FruValue {
 impl FruValue {
     pub fn get_type(&self) -> FruValue {
         match self {
-            FruValue::Nah => BTypeNah::get_value(),
-            FruValue::Number(_) => BTypeNumber::get_value(),
-            FruValue::Bool(_) => BTypeBool::get_value(),
-            FruValue::String(_) => BTypeString::get_value(),
-            FruValue::Function(_) => BTypeFunction::get_value(),
-            FruValue::BuiltinFunction(_) => BTypeFunction::get_value(),
-            FruValue::Curried(_) => BTypeFunction::get_value(),
-            FruValue::Type(_) => BTypeNah::get_value(),
+            FruValue::Nah => BuiltinNahType::get_value(),
+            FruValue::Number(_) => BuiltinNumberType::get_value(),
+            FruValue::Bool(_) => BuiltinBoolType::get_value(),
+            FruValue::Function(_) => BuiltinFunctionType::get_value(),
+            FruValue::BuiltinFunction(_) => BuiltinFunctionType::get_value(),
+            FruValue::Curried(_) => BuiltinFunctionType::get_value(),
+            FruValue::Type(_) => BuiltinNahType::get_value(),
             FruValue::Object(obj) => obj.get_type(),
             FruValue::NativeObject(obj) => obj.get_type(),
         }
@@ -145,7 +143,6 @@ impl PartialEq for FruValue {
             (FruValue::Nah, FruValue::Nah) => true,
             (FruValue::Number(left), FruValue::Number(right)) => left == right,
             (FruValue::Bool(left), FruValue::Bool(right)) => left == right,
-            (FruValue::String(left), FruValue::String(right)) => left == right,
             (FruValue::Type(left), FruValue::Type(right)) => left == right,
             (FruValue::Object(left), FruValue::Object(right)) => left == right,
             (FruValue::NativeObject(left), FruValue::NativeObject(right)) => left == right,
@@ -155,12 +152,11 @@ impl PartialEq for FruValue {
 }
 
 impl Debug for FruValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             FruValue::Nah => write!(f, "nah"),
             FruValue::Number(x) => write!(f, "{}", x),
             FruValue::Bool(x) => write!(f, "{}", x),
-            FruValue::String(x) => write!(f, "{}", x),
             FruValue::Function(x) => Debug::fmt(x, f),
             FruValue::BuiltinFunction(x) => Debug::fmt(x, f),
             FruValue::Curried(x) => Debug::fmt(x, f),

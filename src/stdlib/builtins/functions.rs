@@ -2,14 +2,18 @@
 
 use std::{collections::HashMap, io, io::Write};
 
-use crate::interpreter::{
-    error::FruError,
-    identifier::Identifier,
-    value::{
-        builtin_function::BuiltinFunction,
-        fru_value::{FruValue, TFnBuiltin},
-        function_helpers::EvaluatedArgumentList,
+use crate::{
+    interpreter::{
+        error::FruError,
+        identifier::Identifier,
+        value::{
+            builtin_function::BuiltinFunction,
+            fru_value::{FruValue, TFnBuiltin},
+            function_helpers::EvaluatedArgumentList,
+            native_object::NativeObject,
+        },
     },
+    stdlib::builtins::builtin_string_instance::BuiltinStringInstance,
 };
 
 pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
@@ -45,7 +49,9 @@ fn b_input(args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
 
     let mut input = String::new();
     io::stdin().read_line(&mut input).unwrap();
-    Ok(FruValue::String(input.trim().to_string()))
+    Ok(NativeObject::new_value(BuiltinStringInstance::new(
+        input.trim().to_string(),
+    )))
 }
 
 fn b_assert_eq(args: EvaluatedArgumentList) -> Result<FruValue, FruError> {

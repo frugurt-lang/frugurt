@@ -53,13 +53,13 @@ impl OperatorIdentifier {
 }
 
 impl Debug for Identifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self)
     }
 }
 
 impl Display for Identifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
             "{}",
@@ -69,7 +69,7 @@ impl Display for Identifier {
 }
 
 pub mod id {
-    use macros::static_ident;
+    use frugurt_macros::static_ident;
 
     use crate::interpreter::identifier::Identifier;
 

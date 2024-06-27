@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 
-use macros::static_ident;
+use frugurt_macros::static_ident;
 
 use crate::{
     interpreter::{identifier::Identifier, value::fru_value::FruValue},
     stdlib::builtins::{
-        b_bool::BTypeBool, b_function::BTypeFunction, b_nah::BTypeNah, b_number::BTypeNumber,
-        b_string::BTypeString, b_type::BTypeType, functions::builtin_functions,
+        builtin_bool_type::BuiltinBoolType, builtin_function_type::BuiltinFunctionType,
+        builtin_nah_type::BuiltinNahType, builtin_number_type::BuiltinNumberType,
+        builtin_string_type::BuiltinStringType, builtin_type_type::BuiltinTypeType,
+        functions::builtin_functions,
     },
 };
 
@@ -18,12 +20,12 @@ pub fn builtin_variables() -> HashMap<Identifier, FruValue> {
     // types
 
     res.extend([
-        (static_ident!("Nah"), BTypeNah::get_value()),
-        (static_ident!("Number"), BTypeNumber::get_value()),
-        (static_ident!("Bool"), BTypeBool::get_value()),
-        (static_ident!("String"), BTypeString::get_value()),
-        (static_ident!("Function"), BTypeFunction::get_value()),
-        (static_ident!("Type"), BTypeType::get_value()),
+        (static_ident!("Nah"), BuiltinNahType::get_value()),
+        (static_ident!("Number"), BuiltinNumberType::get_value()),
+        (static_ident!("Bool"), BuiltinBoolType::get_value()),
+        (static_ident!("String"), BuiltinStringType::get_value()),
+        (static_ident!("Function"), BuiltinFunctionType::get_value()),
+        (static_ident!("Type"), BuiltinTypeType::get_value()),
     ]);
 
     res

@@ -6,7 +6,9 @@ use crate::{
         identifier::{id, OperatorIdentifier},
         value::{fru_value::FruValue, native_object::INativeObject, operator::AnyOperator},
     },
-    stdlib::builtins::{b_bool::BTypeBool, b_number::BTypeNumber, b_string::BTypeString},
+    stdlib::builtins::{
+        builtin_bool_type::BuiltinBoolType, builtin_number_type::BuiltinNumberType,
+    },
 };
 
 macro_rules! builtin_operator {
@@ -38,8 +40,8 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
     let mut res = HashMap::new();
 
     res.extend(operator_group!(
-        BTypeNumber.get_uid(),
-        BTypeNumber.get_uid(),
+        BuiltinNumberType.get_uid(),
+        BuiltinNumberType.get_uid(),
         [
             (PLUS, num_plus_num),
             (MINUS, num_minus_num),
@@ -57,35 +59,35 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
     ));
 
     res.extend(operator_group!(
-        BTypeBool.get_uid(),
-        BTypeBool.get_uid(),
+        BuiltinBoolType.get_uid(),
+        BuiltinBoolType.get_uid(),
         [(AND, bool_and_bool), (OR, bool_or_bool)]
     ));
 
-    res.extend(operator_group!(
-        BTypeString.get_uid(),
-        BTypeString.get_uid(),
-        [
-            (COMBINE, string_concat),
-            (LESS, string_less_string),
-            (LESS_EQ, string_less_eq_string),
-            (GREATER, string_greater_string),
-            (GREATER_EQ, string_greater_eq_string),
-            (EQ, string_eq_string),
-            (NOT_EQ, string_not_eq_string)
-        ]
-    ));
+    // res.extend(operator_group!(
+    //     BStringType.get_uid(),
+    //     BStringType.get_uid(),
+    //     [
+    //         (COMBINE, string_concat),
+    //         (LESS, string_less_string),
+    //         (LESS_EQ, string_less_eq_string),
+    //         (GREATER, string_greater_string),
+    //         (GREATER_EQ, string_greater_eq_string),
+    //         (EQ, string_eq_string),
+    //         (NOT_EQ, string_not_eq_string)
+    //     ]
+    // ));
 
-    res.extend([
-        (
-            OperatorIdentifier::new(id::MULTIPLY, BTypeString.get_uid(), BTypeNumber.get_uid()),
-            AnyOperator::BuiltinOperator(string_mul_num),
-        ),
-        (
-            OperatorIdentifier::new(id::MULTIPLY, BTypeNumber.get_uid(), BTypeString.get_uid()),
-            AnyOperator::BuiltinOperator(num_mul_string),
-        ),
-    ]);
+    // res.extend([
+    //     (
+    //         OperatorIdentifier::new(id::MULTIPLY, BStringType.get_uid(), BTypeNumber.get_uid()),
+    //         AnyOperator::BuiltinOperator(string_mul_num),
+    //     ),
+    //     (
+    //         OperatorIdentifier::new(id::MULTIPLY, BTypeNumber.get_uid(), BStringType.get_uid()),
+    //         AnyOperator::BuiltinOperator(num_mul_string),
+    //     ),
+    // ]);
 
     res
 }
@@ -135,33 +137,34 @@ builtin_operator!(bool_or_bool, Bool, Bool, Bool, ||);
 builtin_operator!(bool_and_bool, Bool, Bool, Bool, &&);
 
 // string
-builtin_operator!(string_less_string, String, String, Bool, <);
-builtin_operator!(string_less_eq_string, String, String, Bool, <=);
-builtin_operator!(string_greater_string, String, String, Bool, >);
-builtin_operator!(string_greater_eq_string, String, String, Bool, >=);
-builtin_operator!(string_eq_string, String, String, Bool, ==);
-builtin_operator!(string_not_eq_string, String, String, Bool, !=);
-
-fn string_concat(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-    if let (FruValue::String(l), FruValue::String(r)) = (left, right) {
-        return Ok(FruValue::String(l + &*r));
-    }
-
-    unreachable!();
-}
-
-fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-    if let (FruValue::String(l), FruValue::Number(r)) = (left, right) {
-        if r.fract() != 0.0 || r < 0.0 {
-            return FruError::new_res("String * number must be a positive integer");
-        }
-
-        return Ok(FruValue::String(l.repeat(r as usize)));
-    }
-
-    unreachable!();
-}
-
-fn num_mul_string(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-    string_mul_num(right, left)
-}
+// TODO: anyhow
+// builtin_operator!(string_less_string, String, String, Bool, <);
+// builtin_operator!(string_less_eq_string, String, String, Bool, <=);
+// builtin_operator!(string_greater_string, String, String, Bool, >);
+// builtin_operator!(string_greater_eq_string, String, String, Bool, >=);
+// builtin_operator!(string_eq_string, String, String, Bool, ==);
+// builtin_operator!(string_not_eq_string, String, String, Bool, !=);
+//
+// fn string_concat(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+//     if let (FruValue::String(l), FruValue::String(r)) = (left, right) {
+//         return Ok(FruValue::String(l + &*r));
+//     }
+//
+//     unreachable!();
+// }
+//
+// fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+//     if let (FruValue::String(l), FruValue::Number(r)) = (left, right) {
+//         if r.fract() != 0.0 || r < 0.0 {
+//             return FruError::new_res("String * number must be a positive integer");
+//         }
+//
+//         return Ok(FruValue::String(l.repeat(r as usize)));
+//     }
+//
+//     unreachable!();
+// }
+//
+// fn num_mul_string(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+//     string_mul_num(right, left)
+// }

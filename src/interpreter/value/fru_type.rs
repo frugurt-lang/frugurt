@@ -213,7 +213,7 @@ impl PartialEq for FruType {
 }
 
 impl Debug for FruField {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if self.is_public {
             write!(f, "pub ")?;
         }
@@ -227,7 +227,7 @@ impl Debug for FruField {
 }
 
 impl Debug for FruType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "{}", self.internal.ident)
     }
 }

@@ -16,7 +16,7 @@ use crate::interpreter::{
 pub struct OfObject;
 
 pub trait INativeObject: Debug {
-    fn as_any(&self) -> &dyn Any; // TODO: add derive macro for as_any and fru_clone
+    fn as_any(self: Rc<Self>) -> Rc<dyn Any>;
 
     fn get_uid(&self) -> Id<OfObject>;
 
@@ -83,13 +83,13 @@ impl NativeObject {
         })
     }
 
-    pub fn downcast<T: 'static>(&self) -> Option<&T> {
-        self.internal.as_any().downcast_ref::<T>()
+    pub fn downcast<T: 'static>(&self) -> Option<Rc<T>> {
+        self.internal.clone().as_any().downcast::<T>().ok()
     }
 }
 
 impl Debug for NativeObject {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         Debug::fmt(&self.internal, f)
     }
 }

@@ -1,7 +1,8 @@
+use clap::Parser;
+
 use std::{path::PathBuf, time::Instant};
 
 use crate::interpreter::runner::execute_file;
-use clap::Parser;
 
 mod interpreter;
 mod stdlib;

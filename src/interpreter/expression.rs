@@ -13,7 +13,11 @@ use crate::{
             function_helpers::{ArgumentList, EvaluatedArgumentList, FormalParameters},
         },
     },
-    stdlib::scope::fru_scope::{extract_scope_from_value, BScope, BTypeScope},
+    stdlib::builtins::{
+        builtin_scope_instance::{extract_scope_from_value, BuiltinScopeInstance},
+        builtin_scope_type::BuiltinScopeType,
+        builtin_string_instance::BuiltinStringInstance,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -88,7 +92,7 @@ impl FruExpression {
 
             FruExpression::Variable { ident } => Ok(scope.get_variable(*ident)?),
 
-            FruExpression::ScopeAccessor => Ok(BScope::new_value(scope)),
+            FruExpression::ScopeAccessor => Ok(BuiltinScopeInstance::new_value(scope)),
 
             FruExpression::Function { args, body } => {
                 Ok(FruValue::Function(Rc::new(FruFunction {
@@ -110,7 +114,7 @@ impl FruExpression {
 
             FruExpression::ScopeModifier { what, body, expr } => {
                 let what = what.evaluate(scope)?;
-                if what.get_type() != BTypeScope::get_value() {
+                if what.get_type() != BuiltinScopeType::get_value() {
                     return Control::new_err(format!(
                         "Expected `Scope` in scope modifier expression, got `{:?}`",
                         what.get_type()
@@ -199,8 +203,8 @@ impl FruExpression {
             FruExpression::Import { path } => {
                 let path = path.evaluate(scope.clone())?;
 
-                let path = match path {
-                    FruValue::String(path) => path,
+                let path = match Rc::<BuiltinStringInstance>::try_from(&path) {
+                    Ok(path) => path.value.clone(),
 
                     _ => {
                         return Control::new_err(format!(
@@ -214,7 +218,7 @@ impl FruExpression {
 
                 let result_scope = runner::execute_file(&path)?;
 
-                Ok(BScope::new_value(result_scope))
+                Ok(BuiltinScopeInstance::new_value(result_scope))
             }
         }
     }

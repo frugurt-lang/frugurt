@@ -1,22 +1,32 @@
-use std::{boxed::Box, collections::hash_map::Entry, collections::HashMap, rc::Rc, str::Utf8Error};
+use std::{
+    boxed::Box,
+    collections::{hash_map::Entry, HashMap},
+    rc::Rc,
+    str::Utf8Error,
+};
 
-use macros::static_ident;
 use snailquote::unescape;
 use thiserror::Error;
 use tree_sitter::{Node, Parser, Range};
 use tree_sitter_frugurt;
 
-use crate::interpreter::{
-    ast_helpers::{RawMethod, RawStaticField},
-    expression::FruExpression,
-    helpers::WrappingExtension,
-    identifier::Identifier,
-    statement::FruStatement,
-    value::{
-        fru_type::{FruField, Property, TypeFlavor},
-        fru_value::FruValue,
-        function_helpers::{ArgumentList, FormalParameters},
+use frugurt_macros::static_ident;
+
+use crate::{
+    interpreter::{
+        ast_helpers::{RawMethod, RawStaticField},
+        expression::FruExpression,
+        helpers::WrappingExtension,
+        identifier::Identifier,
+        statement::FruStatement,
+        value::{
+            fru_type::{FruField, Property, TypeFlavor},
+            fru_value::FruValue,
+            function_helpers::{ArgumentList, FormalParameters},
+            native_object::NativeObject,
+        },
     },
+    stdlib::builtins::builtin_string_instance::BuiltinStringInstance,
 };
 
 #[derive(Error, Debug)]
@@ -391,7 +401,7 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
 
         "string_literal" => match unescape(&ast.text()?.replace("\\\n", "\n")) {
             Ok(s) => FruExpression::Literal {
-                value: FruValue::String(s),
+                value: NativeObject::new_value(BuiltinStringInstance::new(s)),
             },
 
             Err(err) => {
