@@ -1,4 +1,4 @@
-use std::{fmt::Debug, rc::Rc};
+use std::fmt::Debug;
 
 use uid::Id;
 
@@ -34,24 +34,6 @@ impl INativeObject for BuiltinStringInstance {
 
     fn get_type(&self) -> FruValue {
         BuiltinStringType::get_value()
-    }
-}
-
-impl TryFrom<&FruValue> for Rc<BuiltinStringInstance> {
-    type Error = ();
-
-    fn try_from(value: &FruValue) -> Result<Self, Self::Error> {
-        let value = if let FruValue::NativeObject(x) = value {
-            x
-        } else {
-            return Err(());
-        };
-
-        if let Some(s) = value.downcast::<BuiltinStringInstance>() {
-            Ok(s)
-        } else {
-            Err(())
-        }
     }
 }
 

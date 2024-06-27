@@ -21,7 +21,7 @@ use crate::{
 };
 
 pub struct BuiltinScopeInstance {
-    scope: Rc<Scope>,
+    pub scope: Rc<Scope>,
 }
 
 impl BuiltinScopeInstance {
@@ -53,13 +53,5 @@ impl INativeObject for BuiltinScopeInstance {
 impl Debug for BuiltinScopeInstance {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         write!(f, "scope")
-    }
-}
-
-pub fn extract_scope_from_value(v: &FruValue) -> Option<Rc<Scope>> {
-    if let FruValue::NativeObject(o) = v {
-        o.downcast::<BuiltinScopeInstance>().map(|x| x.scope.clone())
-    } else {
-        None
     }
 }

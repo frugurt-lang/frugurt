@@ -11,11 +11,11 @@ use crate::{
             fru_function::FruFunction,
             fru_value::FruValue,
             function_helpers::{ArgumentList, EvaluatedArgumentList, FormalParameters},
+            native_object::cast_object,
         },
     },
     stdlib::builtins::{
-        builtin_scope_instance::{extract_scope_from_value, BuiltinScopeInstance},
-        builtin_scope_type::BuiltinScopeType,
+        builtin_scope_instance::BuiltinScopeInstance,
         builtin_string_instance::BuiltinStringInstance,
     },
 };
@@ -114,14 +114,16 @@ impl FruExpression {
 
             FruExpression::ScopeModifier { what, body, expr } => {
                 let what = what.evaluate(scope)?;
-                if what.get_type() != BuiltinScopeType::get_value() {
-                    return Control::new_err(format!(
-                        "Expected `Scope` in scope modifier expression, got `{:?}`",
-                        what.get_type()
-                    ));
-                }
 
-                let new_scope = extract_scope_from_value(&what).expect("scope");
+                let new_scope = match cast_object::<BuiltinScopeInstance>(&what) {
+                    Some(new_scope) => new_scope.scope.clone(),
+                    None => {
+                        return Control::new_err(format!(
+                            "Expected `Scope` in scope modifier expression, got `{:?}`",
+                            what.get_type()
+                        ));
+                    }
+                };
 
                 for statement in body {
                     statement.execute(new_scope.clone())?;
@@ -178,7 +180,7 @@ impl FruExpression {
                     ))
                     .map_err(|x| x.into_error(type_left, type_right))?;
 
-                Ok(op.operate(left_val, right_val)?)
+                op.operate(left_val, right_val).map_err(Into::into)
             }
 
             FruExpression::If {
@@ -188,9 +190,9 @@ impl FruExpression {
             } => match condition.evaluate(scope.clone())? {
                 FruValue::Bool(b) => {
                     if b {
-                        then_body.evaluate(scope.clone())
+                        then_body.evaluate(scope)
                     } else {
-                        else_body.evaluate(scope.clone())
+                        else_body.evaluate(scope)
                     }
                 }
 
@@ -203,8 +205,8 @@ impl FruExpression {
             FruExpression::Import { path } => {
                 let path = path.evaluate(scope.clone())?;
 
-                let path = match Rc::<BuiltinStringInstance>::try_from(&path) {
-                    Ok(path) => path.value.clone(),
+                let path = match cast_object::<BuiltinStringInstance>(&path) {
+                    Some(path) => path.value.clone(),
 
                     _ => {
                         return Control::new_err(format!(

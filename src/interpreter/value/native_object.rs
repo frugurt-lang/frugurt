@@ -88,6 +88,14 @@ impl NativeObject {
     }
 }
 
+pub fn cast_object<T: INativeObject + 'static>(o: &FruValue) -> Option<Rc<T>> {
+    if let FruValue::NativeObject(o) = o {
+        o.downcast()
+    } else {
+        None
+    }
+}
+
 impl Debug for NativeObject {
     fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
         Debug::fmt(&self.internal, f)

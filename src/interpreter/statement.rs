@@ -11,12 +11,11 @@ use crate::{
             fru_function::FruFunction,
             fru_type::{FruField, FruType, Property, TypeFlavor},
             fru_value::FruValue,
+            native_object::cast_object,
             operator::AnyOperator,
         },
     },
-    stdlib::builtins::{
-        builtin_scope_instance::extract_scope_from_value, builtin_scope_type::BuiltinScopeType,
-    },
+    stdlib::builtins::builtin_scope_instance::BuiltinScopeInstance,
 };
 
 #[derive(Debug, Clone)]
@@ -100,14 +99,16 @@ impl FruStatement {
 
             FruStatement::ScopeModifier { what, body } => {
                 let what = what.evaluate(scope)?;
-                if what.get_type() != BuiltinScopeType::get_value() {
-                    return Control::new_err(format!(
-                        "Expected `Scope` in scope modifier statement, got `{:?}`",
-                        what.get_type()
-                    ));
-                }
 
-                let new_scope = extract_scope_from_value(&what).expect("scope");
+                let new_scope = match cast_object::<BuiltinScopeInstance>(&what) {
+                    Some(new_scope) => new_scope.scope.clone(),
+                    None => {
+                        return Control::new_err(format!(
+                            "Expected `Scope` in scope modifier statement, got `{:?}`",
+                            what.get_type()
+                        ));
+                    }
+                };
 
                 for statement in body {
                     statement.execute(new_scope.clone())?;

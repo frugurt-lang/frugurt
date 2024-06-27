@@ -23,6 +23,16 @@ macro_rules! builtin_operator {
     };
 }
 
+// macro_rules! builtin_operator_string {
+//     ($Name:ident, $Res:expr, $OP:tt) => {
+//         fn $Name(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
+//             let l = &cast_object::<BuiltinStringInstance>(&left).unwrap().value;
+//             let r = &cast_object::<BuiltinStringInstance>(&right).unwrap().value;
+//             Ok($Res(l $OP r))
+//         }
+//     };
+// }
+
 macro_rules! operator_group {
     ($left_ident:expr, $right_ident:expr, [$(($op:ident, $fn_name:ident)),*]) => {
         [
@@ -65,8 +75,8 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
     ));
 
     // res.extend(operator_group!(
-    //     BStringType.get_uid(),
-    //     BStringType.get_uid(),
+    //     BuiltinStringType.get_uid(),
+    //     BuiltinStringType.get_uid(),
     //     [
     //         (COMBINE, string_concat),
     //         (LESS, string_less_string),
@@ -77,14 +87,22 @@ pub fn builtin_operators() -> HashMap<OperatorIdentifier, AnyOperator> {
     //         (NOT_EQ, string_not_eq_string)
     //     ]
     // ));
-
+    //
     // res.extend([
     //     (
-    //         OperatorIdentifier::new(id::MULTIPLY, BStringType.get_uid(), BTypeNumber.get_uid()),
+    //         OperatorIdentifier::new(
+    //             id::MULTIPLY,
+    //             BuiltinStringType.get_uid(),
+    //             BuiltinNumberType.get_uid(),
+    //         ),
     //         AnyOperator::BuiltinOperator(string_mul_num),
     //     ),
     //     (
-    //         OperatorIdentifier::new(id::MULTIPLY, BTypeNumber.get_uid(), BStringType.get_uid()),
+    //         OperatorIdentifier::new(
+    //             id::MULTIPLY,
+    //             BuiltinNumberType.get_uid(),
+    //             BuiltinStringType.get_uid(),
+    //         ),
     //         AnyOperator::BuiltinOperator(num_mul_string),
     //     ),
     // ]);
@@ -137,29 +155,33 @@ builtin_operator!(bool_or_bool, Bool, Bool, Bool, ||);
 builtin_operator!(bool_and_bool, Bool, Bool, Bool, &&);
 
 // string
-// TODO: anyhow
-// builtin_operator!(string_less_string, String, String, Bool, <);
-// builtin_operator!(string_less_eq_string, String, String, Bool, <=);
-// builtin_operator!(string_greater_string, String, String, Bool, >);
-// builtin_operator!(string_greater_eq_string, String, String, Bool, >=);
-// builtin_operator!(string_eq_string, String, String, Bool, ==);
-// builtin_operator!(string_not_eq_string, String, String, Bool, !=);
+// builtin_operator_string!(string_less_string, FruValue::Bool, <);
+// builtin_operator_string!(string_less_eq_string, FruValue::Bool, <=);
+// builtin_operator_string!(string_greater_string, FruValue::Bool, >);
+// builtin_operator_string!(string_greater_eq_string, FruValue::Bool, >=);
+// builtin_operator_string!(string_eq_string, FruValue::Bool, ==);
+// builtin_operator_string!(string_not_eq_string, FruValue::Bool, !=);
 //
 // fn string_concat(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-//     if let (FruValue::String(l), FruValue::String(r)) = (left, right) {
-//         return Ok(FruValue::String(l + &*r));
-//     }
-//
-//     unreachable!();
+//     let l = &cast_object::<BuiltinStringInstance>(&left).unwrap().value;
+//     let r = &cast_object::<BuiltinStringInstance>(&right).unwrap().value;
+//     Ok(NativeObject::new_value(BuiltinStringInstance::new(
+//         l.to_owned() + r,
+//     )))
 // }
 //
 // fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-//     if let (FruValue::String(l), FruValue::Number(r)) = (left, right) {
+//     if let FruValue::Number(r) = right {
 //         if r.fract() != 0.0 || r < 0.0 {
 //             return FruError::new_res("String * number must be a positive integer");
 //         }
 //
-//         return Ok(FruValue::String(l.repeat(r as usize)));
+//         let l = &cast_object::<BuiltinStringInstance>(&left).unwrap().value;
+//         let r = r as usize;
+//
+//         return Ok(NativeObject::new_value(BuiltinStringInstance::new(
+//             l.repeat(r),
+//         )));
 //     }
 //
 //     unreachable!();
