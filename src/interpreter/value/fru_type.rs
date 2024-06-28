@@ -1,4 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{hash_map::Entry, HashMap},
+    fmt::Debug,
+    rc::Rc,
+};
 
 use uid::Id;
 
@@ -6,13 +11,12 @@ use crate::interpreter::{
     control::{returned, returned_nothing},
     error::FruError,
     expression::FruExpression,
-    helpers::WrappingExtension,
-    identifier::Identifier,
+    identifier::{Identifier, OperatorIdentifier},
     scope::Scope,
     statement::FruStatement,
     value::{
         fru_function::FruFunction, fru_object::FruObject, fru_value::FruValue,
-        function_helpers::EvaluatedArgumentList, native_object::OfObject,
+        function_helpers::EvaluatedArgumentList, native_object::OfObject, operator::AnyOperator,
     },
 };
 
@@ -32,6 +36,7 @@ pub struct FruTypeInternal {
     static_properties: HashMap<Identifier, Property>,
     methods: HashMap<Identifier, FruFunction>,
     static_methods: HashMap<Identifier, FruFunction>,
+    operators: RefCell<HashMap<OperatorIdentifier, AnyOperator>>,
     scope: Rc<Scope>,
     uid: Id<OfObject>,
 }
@@ -70,7 +75,7 @@ impl FruType {
         scope: Rc<Scope>,
     ) -> FruValue {
         FruValue::Type(Self {
-            internal: FruTypeInternal {
+            internal: Rc::new(FruTypeInternal {
                 ident,
                 type_flavor,
                 fields,
@@ -79,10 +84,10 @@ impl FruType {
                 methods,
                 static_methods,
                 static_properties,
+                operators: Default::default(),
                 scope,
                 uid: Id::new(),
-            }
-            .wrap_rc(),
+            }),
         })
     }
 
@@ -107,12 +112,13 @@ impl FruType {
     }
 
     pub fn get_field_k(&self, ident: Identifier) -> Option<usize> {
-        for (i, field_ident) in self.internal.fields.iter().enumerate() {
+        self.internal.fields.iter().enumerate().find_map(|(i, field_ident)| {
             if field_ident.ident == ident {
-                return Some(i);
+                Some(i)
+            } else {
+                None
             }
-        }
-        None
+        })
     }
 
     pub fn get_property(&self, ident: Identifier) -> Option<Property> {
@@ -173,6 +179,26 @@ impl FruType {
         FruError::new_res(format!("static prop `{}` not found", ident))
     }
 
+    pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
+        self.internal.operators.borrow().get(&ident).cloned()
+    }
+
+    pub fn set_operator(
+        &self,
+        ident: OperatorIdentifier,
+        value: AnyOperator,
+    ) -> Result<(), FruError> {
+        match self.internal.operators.borrow_mut().entry(ident) {
+            Entry::Occupied(_) => {
+                FruError::new_res(format!("operator `{:?}` is already set", ident.op))
+            }
+            Entry::Vacant(entry) => {
+                entry.insert(value);
+                Ok(())
+            }
+        }
+    }
+
     pub fn instantiate(&self, mut args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         let mut obj_fields = HashMap::new();
 
@@ -219,10 +245,9 @@ impl Debug for FruField {
         }
         write!(f, "{}", self.ident)?;
         if let Some(type_ident) = &self.type_ident {
-            write!(f, ": {}", type_ident)
-        } else {
-            Ok(())
+            write!(f, ": {}", type_ident)?;
         }
+        Ok(())
     }
 }
 

@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Formatter},
-    rc::Rc,
-};
+use std::{fmt::Debug, rc::Rc};
 
 use uid::Id;
 
@@ -51,7 +48,7 @@ impl INativeObject for BuiltinScopeInstance {
 }
 
 impl Debug for BuiltinScopeInstance {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "scope")
     }
 }

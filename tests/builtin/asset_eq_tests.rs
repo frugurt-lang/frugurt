@@ -8,7 +8,7 @@ fn test_basic() {
 }
 
 #[test]
-#[should_panic(expected = "assertion failed: 1 != 2")]
+#[should_panic(expected = "assertion failed: 1.0 != 2.0")]
 fn test_not_eq_1() {
     run(r#"
             assert_eq(1, 2);
@@ -16,7 +16,7 @@ fn test_not_eq_1() {
 }
 
 #[test]
-#[should_panic(expected = "assertion failed: 1 != 1")] // FIXME: differentiate repr and display
+#[should_panic(expected = "assertion failed: 1.0 != 1")] // FIXME: differentiate repr and display
 fn test_not_eq_2() {
     run(r#"
             assert_eq(1, "1");

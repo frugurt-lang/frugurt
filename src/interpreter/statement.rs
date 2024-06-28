@@ -204,30 +204,30 @@ impl FruStatement {
                 right_type_ident,
                 body,
             } => {
-                let left_type = scope.get_variable(*left_type_ident)?.get_uid();
-                let right_type = scope.get_variable(*right_type_ident)?.get_uid();
+                let left_type = scope.get_variable(*left_type_ident)?;
+                let right_type = scope.get_variable(*right_type_ident)?;
 
-                if *commutative {
-                    scope.set_operator(
-                        OperatorIdentifier::new(*ident, right_type, left_type),
-                        AnyOperator::Operator {
-                            left_ident: *right_ident,
-                            right_ident: *left_ident,
-                            body: body.clone(),
-                            scope: scope.clone(),
-                        },
-                    );
-                }
-
-                scope.set_operator(
-                    OperatorIdentifier::new(*ident, left_type, right_type),
+                left_type.set_operator(
+                    OperatorIdentifier::new(*ident, right_type.get_uid()),
                     AnyOperator::Operator {
                         left_ident: *left_ident,
                         right_ident: *right_ident,
                         body: body.clone(),
                         scope: scope.clone(),
                     },
-                );
+                )?;
+
+                if *commutative {
+                    right_type.set_operator(
+                        OperatorIdentifier::new(*ident, left_type.get_uid()),
+                        AnyOperator::Operator {
+                            left_ident: *right_ident,
+                            right_ident: *left_ident,
+                            body: body.clone(),
+                            scope: scope.clone(),
+                        },
+                    )?;
+                }
             }
 
             FruStatement::Type {

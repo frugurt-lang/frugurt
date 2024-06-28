@@ -64,6 +64,31 @@ fn test_operators() {
 }
 
 #[test]
+#[should_panic(expected = "operator `+` is already set")]
+fn test_operator_clash_1() {
+    run(r#"
+            operator + (a : Number, b : Number) {
+                a + b
+            }
+        "#)
+}
+
+#[test]
+#[should_panic(expected = "operator `+` is already set")]
+fn test_operator_clash_2() {
+    run(r#"
+            struct A {}
+            
+            operator + (a : A, b : A) {
+                a + b
+            }
+            operator + (a : A, b : A) {
+                a + b
+            }
+        "#)
+}
+
+#[test]
 fn test_named_fields() {
     run(r#"
             struct Vec2 {

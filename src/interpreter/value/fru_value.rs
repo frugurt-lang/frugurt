@@ -2,10 +2,12 @@ use std::{cmp::PartialEq, fmt::Debug, rc::Rc};
 
 use uid::Id;
 
+use frugurt_macros::static_ident;
+
 use crate::{
     interpreter::{
         error::FruError,
-        identifier::Identifier,
+        identifier::{Identifier, OperatorIdentifier},
         value::{
             builtin_function::BuiltinFunction,
             curried::Curried,
@@ -14,11 +16,13 @@ use crate::{
             fru_type::FruType,
             function_helpers::EvaluatedArgumentList,
             native_object::{NativeObject, OfObject},
+            operator::AnyOperator,
         },
     },
     stdlib::builtins::{
         builtin_bool_type::BuiltinBoolType, builtin_function_type::BuiltinFunctionType,
         builtin_nah_type::BuiltinNahType, builtin_number_type::BuiltinNumberType,
+        builtin_type_type::BuiltinTypeType,
     },
 };
 
@@ -53,8 +57,8 @@ impl FruValue {
             FruValue::Bool(_) => BuiltinBoolType::get_value(),
             FruValue::Function(_) => BuiltinFunctionType::get_value(),
             FruValue::BuiltinFunction(_) => BuiltinFunctionType::get_value(),
-            FruValue::Curried(_) => BuiltinFunctionType::get_value(),
-            FruValue::Type(_) => BuiltinNahType::get_value(),
+            FruValue::Curried(_) => BuiltinFunctionType::get_value(), // FIXME
+            FruValue::Type(_) => BuiltinTypeType::get_value(),
             FruValue::Object(obj) => obj.get_type(),
             FruValue::NativeObject(obj) => obj.get_type(),
         }
@@ -66,7 +70,7 @@ impl FruValue {
             FruValue::Object(obj) => obj.get_uid(),
             FruValue::NativeObject(obj) => obj.get_uid(),
 
-            _ => panic!(),
+            _ => panic!(), // FIXME
         }
     }
 
@@ -126,6 +130,30 @@ impl FruValue {
         }
     }
 
+    pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
+        match self {
+            FruValue::Type(t) => t.get_operator(ident),
+
+            FruValue::NativeObject(obj) => obj.get_operator(ident),
+
+            _ => panic!(),
+        }
+    }
+
+    pub fn set_operator(
+        &self,
+        ident: OperatorIdentifier,
+        value: AnyOperator,
+    ) -> Result<(), FruError> {
+        match self {
+            FruValue::Type(t) => t.set_operator(ident, value),
+
+            FruValue::NativeObject(obj) => obj.set_operator(ident, value),
+
+            _ => panic!(),
+        }
+    }
+
     pub fn fru_clone(&self) -> FruValue {
         match self {
             FruValue::Object(obj) => obj.fru_clone(),
@@ -138,6 +166,7 @@ impl FruValue {
 }
 
 impl PartialEq for FruValue {
+    // DELME
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (FruValue::Nah, FruValue::Nah) => true,
@@ -145,7 +174,21 @@ impl PartialEq for FruValue {
             (FruValue::Bool(left), FruValue::Bool(right)) => left == right,
             (FruValue::Type(left), FruValue::Type(right)) => left == right,
             (FruValue::Object(left), FruValue::Object(right)) => left == right,
-            (FruValue::NativeObject(left), FruValue::NativeObject(right)) => left == right,
+            (FruValue::NativeObject(left), FruValue::NativeObject(right)) => {
+                let op = left.get_type().get_operator(OperatorIdentifier::new(
+                    static_ident!("=="),
+                    right.get_type().get_uid(),
+                ));
+                if let Some(op) = op {
+                    if let Ok(x) = op.operate(self.clone(), other.clone()) {
+                        x == FruValue::Bool(true)
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
             _ => false,
         }
     }
@@ -155,8 +198,8 @@ impl Debug for FruValue {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             FruValue::Nah => write!(f, "nah"),
-            FruValue::Number(x) => write!(f, "{}", x),
-            FruValue::Bool(x) => write!(f, "{}", x),
+            FruValue::Number(x) => Debug::fmt(x, f),
+            FruValue::Bool(x) => Debug::fmt(x, f),
             FruValue::Function(x) => Debug::fmt(x, f),
             FruValue::BuiltinFunction(x) => Debug::fmt(x, f),
             FruValue::Curried(x) => Debug::fmt(x, f),

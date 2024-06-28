@@ -30,33 +30,66 @@ pub fn static_ident(input: TokenStream) -> TokenStream {
 pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut item = parse_macro_input!(item as ItemImpl);
 
+    let mut get_set_op_flag = false;
+
     for i in attrs {
         if let TokenTree::Ident(ident) = i {
-            item.items.push(
-                match ident.to_string().as_str() {
-                    "as_any" => syn::parse_quote! {
-                            fn as_any(self: std::rc::Rc<Self>) -> std::rc::Rc<dyn std::any::Any> {
-                                self
+            match ident.to_string().as_str() {
+                "as_any" => item.items.push(syn::parse_quote! {
+                    fn as_any(self: std::rc::Rc<Self>) -> std::rc::Rc<dyn std::any::Any> {
+                        self
+                    }
+                }),
+
+                "get_uid" => item.items.push(syn::parse_quote! {
+                    fn get_uid(&self) -> uid::Id<crate::interpreter::value::native_object::OfObject> {
+                        crate::static_uid!()
+                    }
+                }),
+
+                "get_type" => item.items.push(syn::parse_quote! {
+                    fn get_type(&self) -> FruValue {
+                        crate::stdlib::builtins::builtin_type_type::BuiltinTypeType::get_value()
+                    }
+                }),
+
+                "get_set_op" => {
+                    get_set_op_flag = true;
+                    item.items.push(syn::parse_quote! {
+                        fn get_operator(
+                            &self,
+                            ident: crate::interpreter::identifier::OperatorIdentifier,
+                        ) -> Option<crate::interpreter::value::operator::AnyOperator> {
+                            OPERATORS.lock().unwrap().get(&ident).cloned()
+                        }
+                    });
+                    item.items.push(syn::parse_quote! {
+                        fn set_operator(
+                            &self,
+                            ident: crate::interpreter::identifier::OperatorIdentifier,
+                            value: crate::interpreter::value::operator::AnyOperator,
+                        ) -> Result<(), crate::interpreter::error::FruError> {
+                            match OPERATORS.lock().unwrap().entry(ident) {
+                                std::collections::hash_map::Entry::Occupied(_) => {
+                                    crate::interpreter::error::FruError::new_res(format!("operator `{:?}` is already set", ident.op))
+                                }
+                                std::collections::hash_map::Entry::Vacant(entry) => {
+                                    entry.insert(value);
+                                    Ok(())
+                                }
                             }
-                        },
-                    "get_uid" => syn::parse_quote! {
-                            fn get_uid(&self) -> uid::Id<crate::interpreter::value::native_object::OfObject> {
-                                crate::static_uid!()
-                            }
-                        },
-                    "get_type" => syn::parse_quote! {
-                            fn get_type(&self) -> FruValue {
-                                crate::stdlib::builtins::builtin_type_type::BuiltinTypeType::get_value()
-                            }
-                        },
-                    "fru_clone" => syn::parse_quote! {
-                            fn fru_clone(self: std::rc::Rc<Self>) -> std::rc::Rc<dyn INativeObject> {
-                                self
-                            }
-                        },
-                    _ => panic!("Unknown attribute: {}", ident),
+                        }
+                    });
                 }
-            );
+
+                "fru_clone" => item.items.push(syn::parse_quote! {
+                    fn fru_clone(self: std::rc::Rc<Self>) -> std::rc::Rc<dyn INativeObject> {
+                        self
+                    }
+                }),
+
+                unexpected => panic!("Unknown attribute: {}", unexpected),
+            }
         }
     }
 
@@ -69,11 +102,28 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
             "instantiate" => 5,
             "get_prop" => 6,
             "set_prop" => 7,
-            "fru_clone" => 8,
+            "get_operator" => 8,
+            "set_operator" => 9,
+            "fru_clone" => 10,
             u => unreachable!("{}", u),
         },
         u => unreachable!("{}", u.to_token_stream().to_string()),
     });
 
-    item.to_token_stream().into()
+    let mut item = item.to_token_stream();
+
+    if get_set_op_flag {
+        item.extend(quote! {
+            static OPERATORS: once_cell::sync::Lazy<
+                std::sync::Mutex<
+                    std::collections::HashMap<
+                        crate::interpreter::identifier::OperatorIdentifier,
+                        crate::interpreter::value::operator::AnyOperator,
+                    >,
+                >,
+            > = once_cell::sync::Lazy::new(Default::default);
+        });
+    }
+
+    item.into()
 }

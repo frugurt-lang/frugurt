@@ -1,15 +1,11 @@
-use std::{
-    any::Any,
-    fmt::{Debug, Formatter},
-    rc::Rc,
-};
+use std::{any::Any, fmt::Debug, rc::Rc};
 
 use uid::Id;
 
 use crate::interpreter::{
     error::FruError,
-    identifier::Identifier,
-    value::{fru_value::FruValue, function_helpers::EvaluatedArgumentList},
+    identifier::{Identifier, OperatorIdentifier},
+    value::{fru_value::FruValue, function_helpers::EvaluatedArgumentList, operator::AnyOperator},
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -36,6 +32,18 @@ pub trait INativeObject: Debug {
 
     fn set_prop(&self, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
         FruError::new_res(format!("cannot set prop of `{:?}`", self.get_type()))
+    }
+
+    fn get_operator(&self, _ident: OperatorIdentifier) -> Option<AnyOperator> {
+        unimplemented!();
+    }
+
+    fn set_operator(
+        &self,
+        _ident: OperatorIdentifier,
+        _value: AnyOperator,
+    ) -> Result<(), FruError> {
+        unimplemented!();
     }
 
     fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject>;
@@ -77,27 +85,35 @@ impl NativeObject {
         self.internal.set_prop(ident, value)
     }
 
+    pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
+        self.internal.get_operator(ident)
+    }
+
+    pub fn set_operator(
+        &self,
+        ident: OperatorIdentifier,
+        value: AnyOperator,
+    ) -> Result<(), FruError> {
+        self.internal.set_operator(ident, value)
+    }
+
     pub fn fru_clone(&self) -> FruValue {
         FruValue::NativeObject(NativeObject {
             internal: self.internal.clone().fru_clone(),
         })
     }
-
-    pub fn downcast<T: 'static>(&self) -> Option<Rc<T>> {
-        self.internal.clone().as_any().downcast::<T>().ok()
-    }
 }
 
 pub fn cast_object<T: INativeObject + 'static>(o: &FruValue) -> Option<Rc<T>> {
     if let FruValue::NativeObject(o) = o {
-        o.downcast()
+        o.internal.clone().as_any().downcast().ok()
     } else {
         None
     }
 }
 
 impl Debug for NativeObject {
-    fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         Debug::fmt(&self.internal, f)
     }
 }

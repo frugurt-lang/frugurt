@@ -22,7 +22,6 @@ pub struct Identifier {
 #[derive(Hash, PartialEq, Eq, Copy, Clone)]
 pub struct OperatorIdentifier {
     pub op: Identifier,
-    left: Id<OfObject>,
     right: Id<OfObject>,
 }
 
@@ -47,8 +46,8 @@ impl Identifier {
 }
 
 impl OperatorIdentifier {
-    pub fn new(op: Identifier, left: Id<OfObject>, right: Id<OfObject>) -> Self {
-        Self { op, left, right }
+    pub fn new(op: Identifier, right: Id<OfObject>) -> Self {
+        Self { op, right }
     }
 }
 

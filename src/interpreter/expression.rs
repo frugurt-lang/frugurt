@@ -3,6 +3,7 @@ use std::{path::PathBuf, rc::Rc};
 use crate::{
     interpreter::{
         control::Control,
+        error::FruError,
         identifier::{Identifier, OperatorIdentifier},
         runner,
         scope::Scope,
@@ -172,13 +173,14 @@ impl FruExpression {
                 let type_left = left_val.get_type();
                 let type_right = right_val.get_type();
 
-                let op = scope
-                    .get_operator(OperatorIdentifier::new(
-                        *operator,
-                        type_left.get_uid(),
-                        type_right.get_uid(),
-                    ))
-                    .map_err(|x| x.into_error(type_left, type_right))?;
+                let op = type_left
+                    .get_operator(OperatorIdentifier::new(*operator, type_right.get_uid()))
+                    .ok_or_else(|| {
+                        FruError::new(format!(
+                            "operator `{:?}` between `{:?}` and `{:?}` does not exist",
+                            operator, type_left, type_right
+                        ))
+                    })?;
 
                 op.operate(left_val, right_val).map_err(Into::into)
             }

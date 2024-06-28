@@ -50,3 +50,7 @@ impl Debug for AnyOperator {
         }
     }
 }
+
+unsafe impl Send for AnyOperator {}
+
+unsafe impl Sync for AnyOperator {}
