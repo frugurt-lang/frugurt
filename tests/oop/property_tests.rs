@@ -3,7 +3,7 @@ use crate::run;
 #[test]
 fn test_basics() {
     run(r#"
-            struct Vec {
+            struct Vec2 {
                 x;
                 y;
 
@@ -17,7 +17,7 @@ fn test_basics() {
                 }
             }
 
-            let v = Vec :{ x: 3, y: 4 };
+            let v = Vec2 :{ x: 3, y: 4 };
             assert_eq(v.Length, 5);
 
             v.Length = 1;

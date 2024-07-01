@@ -49,7 +49,7 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
 
                 "get_type" => item.items.push(syn::parse_quote! {
                     fn get_type(&self) -> FruValue {
-                        crate::stdlib::builtins::builtin_type_type::BuiltinTypeType::get_value()
+                        crate::stdlib::prelude::builtin_type_type::BuiltinTypeType::get_singleton()
                     }
                 }),
 
@@ -57,7 +57,7 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
                     get_set_op_flag = true;
                     item.items.push(syn::parse_quote! {
                         fn get_operator(
-                            &self,
+                            self: std::rc::Rc<Self>,
                             ident: crate::interpreter::identifier::OperatorIdentifier,
                         ) -> Option<crate::interpreter::value::operator::AnyOperator> {
                             OPERATORS.lock().unwrap().get(&ident).cloned()
@@ -65,7 +65,7 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
                     });
                     item.items.push(syn::parse_quote! {
                         fn set_operator(
-                            &self,
+                            self: std::rc::Rc<Self>,
                             ident: crate::interpreter::identifier::OperatorIdentifier,
                             value: crate::interpreter::value::operator::AnyOperator,
                         ) -> Result<(), crate::interpreter::error::FruError> {

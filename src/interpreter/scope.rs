@@ -7,6 +7,7 @@ use std::{
 use uid::Id;
 
 use crate::{
+    fru_err_res,
     interpreter::{
         error::FruError,
         identifier::Identifier,
@@ -14,7 +15,7 @@ use crate::{
             fru_object::FruObject, fru_type::FruType, fru_value::FruValue, native_object::OfObject,
         },
     },
-    stdlib::builtins::variables::builtin_variables,
+    stdlib::prelude::variables::builtin_variables,
 };
 
 pub struct Scope {
@@ -84,7 +85,7 @@ impl Scope {
     pub fn let_variable(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         match self.variables.borrow_mut().entry(ident) {
             Entry::Occupied(_) => {
-                FruError::new_res(format!("variable `{:?}` already exists", ident))
+                fru_err_res!("variable `{:?}` already exists", ident)
             }
             Entry::Vacant(entry) => {
                 entry.insert(value);
@@ -116,7 +117,7 @@ impl ScopeAncestor {
     fn get_variable(&self, ident: Identifier) -> Result<FruValue, FruError> {
         match self {
             ScopeAncestor::None => {
-                FruError::new_res(format!("variable `{:?}` does not exist", ident))
+                fru_err_res!("variable `{:?}` does not exist", ident)
             }
             ScopeAncestor::Parent(parent) => parent.get_variable(ident),
             ScopeAncestor::Object { object, parent } => {
@@ -131,7 +132,7 @@ impl ScopeAncestor {
     fn set_variable(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         match self {
             ScopeAncestor::None => {
-                FruError::new_res(format!("variable `{:?}` does not exist", ident))
+                fru_err_res!("variable `{:?}` does not exist", ident)
             }
 
             ScopeAncestor::Parent(parent) => parent.set_variable(ident, value),

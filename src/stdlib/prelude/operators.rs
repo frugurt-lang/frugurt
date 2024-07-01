@@ -7,7 +7,7 @@ use crate::{
             operator::AnyOperator,
         },
     },
-    stdlib::builtins::{
+    stdlib::prelude::{
         builtin_bool_type::BuiltinBoolType, builtin_number_type::BuiltinNumberType,
         builtin_string_instance::BuiltinStringInstance, builtin_string_type::BuiltinStringType,
     },
@@ -49,8 +49,8 @@ macro_rules! operator_group {
 #[ctor::ctor]
 fn ct() {
     operator_group!(
-        BuiltinNumberType::get_value(),
-        BuiltinNumberType::get_value(),
+        BuiltinNumberType::get_singleton(),
+        BuiltinNumberType::get_singleton(),
         [
             (id::LESS, num_less_num),
             (id::LESS_EQ, num_less_eq_num),
@@ -67,14 +67,14 @@ fn ct() {
         ]
     );
     operator_group!(
-        BuiltinBoolType::get_value(),
-        BuiltinBoolType::get_value(),
+        BuiltinBoolType::get_singleton(),
+        BuiltinBoolType::get_singleton(),
         [(id::AND, bool_and_bool), (id::OR, bool_or_bool),]
     );
 
     operator_group!(
-        BuiltinStringType::get_value(),
-        BuiltinStringType::get_value(),
+        BuiltinStringType::get_singleton(),
+        BuiltinStringType::get_singleton(),
         [
             (id::LESS, string_less_string),
             (id::LESS_EQ, string_less_eq_string),
@@ -87,14 +87,14 @@ fn ct() {
     );
 
     operator_group!(
-        BuiltinNumberType::get_value(),
-        BuiltinStringType::get_value(),
+        BuiltinNumberType::get_singleton(),
+        BuiltinStringType::get_singleton(),
         [(id::MULTIPLY, num_mul_string),]
     );
 
     operator_group!(
-        BuiltinStringType::get_value(),
-        BuiltinNumberType::get_value(),
+        BuiltinStringType::get_singleton(),
+        BuiltinNumberType::get_singleton(),
         [(id::MULTIPLY, string_mul_num),]
     );
 }

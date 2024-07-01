@@ -7,16 +7,20 @@ use std::{
 
 use uid::Id;
 
-use crate::interpreter::{
-    control::{returned, returned_nothing},
-    error::FruError,
-    expression::FruExpression,
-    identifier::{Identifier, OperatorIdentifier},
-    scope::Scope,
-    statement::FruStatement,
-    value::{
-        fru_function::FruFunction, fru_object::FruObject, fru_value::FruValue,
-        function_helpers::EvaluatedArgumentList, native_object::OfObject, operator::AnyOperator,
+use crate::{
+    fru_err_res,
+    interpreter::{
+        control::{returned, returned_nothing},
+        error::FruError,
+        expression::FruExpression,
+        identifier::{Identifier, OperatorIdentifier},
+        scope::Scope,
+        statement::FruStatement,
+        value::{
+            fru_function::FruFunction, fru_object::FruObject, fru_value::FruValue,
+            function_helpers::EvaluatedArgumentList, native_object::OfObject,
+            operator::AnyOperator,
+        },
     },
 };
 
@@ -141,7 +145,7 @@ impl FruType {
             return match &property.getter {
                 Some(getter) => returned(getter.evaluate(new_scope)),
 
-                None => FruError::new_res(format!("static property `{}` has no getter", ident)),
+                None => fru_err_res!("static property `{}` has no getter", ident),
             };
         }
 
@@ -153,7 +157,7 @@ impl FruType {
             })));
         }
 
-        FruError::new_res(format!("static prop `{}` not found", ident))
+        fru_err_res!("static prop `{}` not found", ident)
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
@@ -172,11 +176,11 @@ impl FruType {
                     returned_nothing(setter.execute(new_scope))
                 }
 
-                None => FruError::new_res(format!("static property `{}` has no setter", ident)),
+                None => fru_err_res!("static property `{}` has no setter", ident),
             };
         }
 
-        FruError::new_res(format!("static prop `{}` not found", ident))
+        fru_err_res!("static prop `{}` not found", ident)
     }
 
     pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
@@ -190,7 +194,7 @@ impl FruType {
     ) -> Result<(), FruError> {
         match self.internal.operators.borrow_mut().entry(ident) {
             Entry::Occupied(_) => {
-                FruError::new_res(format!("operator `{:?}` is already set", ident.op))
+                fru_err_res!("operator `{:?}` is already set", ident.op)
             }
             Entry::Vacant(entry) => {
                 entry.insert(value);
@@ -210,7 +214,7 @@ impl FruType {
                 None => fields[n].ident,
             };
             if obj_fields.contains_key(&ident) {
-                return FruError::new_res(format!("field `{}` is set more than once", ident));
+                return fru_err_res!("field `{}` is set more than once", ident);
             }
             obj_fields.insert(ident, value);
         }
@@ -220,12 +224,12 @@ impl FruType {
         for FruField { ident, .. } in fields {
             match obj_fields.remove(ident) {
                 Some(value) => args.push(value),
-                None => return FruError::new_res(format!("missing field `{}`", ident)),
+                None => return fru_err_res!("missing field `{}`", ident),
             }
         }
 
         if let Some(ident) = obj_fields.keys().next() {
-            return FruError::new_res(format!("field `{}` does not exist", *ident));
+            return fru_err_res!("field `{}` does not exist", *ident);
         }
 
         Ok(FruObject::new_object(self.clone(), args))

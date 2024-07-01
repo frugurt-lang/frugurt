@@ -7,19 +7,19 @@ use crate::{
     static_native_value,
 };
 
-pub struct BuiltinBoolType;
+pub struct BuiltinScopeType;
 
-impl BuiltinBoolType {
-    pub fn get_value() -> FruValue {
-        static_native_value!(BuiltinBoolType)
+impl BuiltinScopeType {
+    pub fn get_singleton() -> FruValue {
+        static_native_value!(BuiltinScopeType)
     }
 }
 
 #[derive_nat(as_any, get_uid, get_type, get_set_op, fru_clone)]
-impl INativeObject for BuiltinBoolType {}
+impl INativeObject for BuiltinScopeType {}
 
-impl Debug for BuiltinBoolType {
+impl Debug for BuiltinScopeType {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "Bool")
+        write!(f, "Scope")
     }
 }

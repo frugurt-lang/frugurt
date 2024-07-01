@@ -14,7 +14,7 @@ use crate::{
             native_object::{INativeObject, NativeObject, OfObject},
         },
     },
-    stdlib::builtins::builtin_scope_type::BuiltinScopeType,
+    stdlib::prelude::builtin_scope_type::BuiltinScopeType,
 };
 
 pub struct BuiltinScopeInstance {
@@ -34,14 +34,14 @@ impl INativeObject for BuiltinScopeInstance {
     }
 
     fn get_type(&self) -> FruValue {
-        BuiltinScopeType::get_value()
+        BuiltinScopeType::get_singleton()
     }
 
-    fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
+    fn get_prop(self: Rc<Self>, ident: Identifier) -> Result<FruValue, FruError> {
         self.scope.get_variable(ident)
     }
 
-    fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
+    fn set_prop(self: Rc<Self>, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         self.scope.let_set_variable(ident, value);
         Ok(())
     }

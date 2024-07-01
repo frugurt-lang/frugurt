@@ -2,14 +2,17 @@ use std::{cell::RefCell, fmt::Debug, rc::Rc};
 
 use uid::Id;
 
-use crate::interpreter::{
-    control::{returned, returned_nothing},
-    error::FruError,
-    identifier::Identifier,
-    scope::Scope,
-    value::{
-        fru_function::FruFunction, fru_type::FruType, fru_type::TypeFlavor, fru_value::FruValue,
-        native_object::OfObject,
+use crate::{
+    fru_err_res,
+    interpreter::{
+        control::{returned, returned_nothing},
+        error::FruError,
+        identifier::Identifier,
+        scope::Scope,
+        value::{
+            fru_function::FruFunction, fru_type::FruType, fru_type::TypeFlavor,
+            fru_value::FruValue, native_object::OfObject,
+        },
     },
 };
 
@@ -70,7 +73,7 @@ impl FruObject {
             return match property.getter {
                 Some(getter) => returned(getter.evaluate(new_scope)),
 
-                None => FruError::new_res(format!("property `{}` has no getter", ident)),
+                None => fru_err_res!("property `{}` has no getter", ident),
             };
         }
 
@@ -86,17 +89,17 @@ impl FruObject {
             return Ok(static_thing);
         }
 
-        FruError::new_res(format!("prop `{}` not found", ident))
+        fru_err_res!("prop `{}` not found", ident)
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         if let Some(field_k) = self.get_fru_type().get_field_k(ident) {
             if self.get_fru_type().get_type_flavor() == TypeFlavor::Data {
-                return FruError::new_res(format!(
+                return fru_err_res!(
                     "cannot set field `{}` in 'data' type `{:?}`",
                     ident,
                     value.get_type()
-                ));
+                );
             }
 
             self.set_kth_field(field_k, value);
@@ -111,7 +114,7 @@ impl FruObject {
 
                 returned_nothing(setter.execute(new_scope))
             } else {
-                FruError::new_res(format!("property `{}` has no setter", ident))
+                fru_err_res!("property `{}` has no setter", ident)
             };
         }
 
@@ -119,11 +122,11 @@ impl FruObject {
             return Ok(());
         }
 
-        FruError::new_res(format!(
+        fru_err_res!(
             "prop `{}` does not exist in struct `{}`",
             ident,
             self.get_fru_type().get_ident()
-        ))
+        )
     }
 
     pub fn fru_clone(&self) -> FruValue {

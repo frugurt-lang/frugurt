@@ -10,3 +10,4 @@ pub mod builtin_type_type;
 pub mod functions;
 pub mod operators;
 pub mod variables;
+pub mod vec;

@@ -9,7 +9,7 @@ use crate::{
         fru_value::FruValue,
         native_object::{INativeObject, OfObject},
     },
-    stdlib::builtins::builtin_string_type::BuiltinStringType,
+    stdlib::prelude::builtin_string_type::BuiltinStringType,
 };
 
 pub struct BuiltinStringInstance {
@@ -33,7 +33,7 @@ impl INativeObject for BuiltinStringInstance {
     }
 
     fn get_type(&self) -> FruValue {
-        BuiltinStringType::get_value()
+        BuiltinStringType::get_singleton()
     }
 }
 

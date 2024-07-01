@@ -2,10 +2,15 @@ use std::{any::Any, fmt::Debug, rc::Rc};
 
 use uid::Id;
 
-use crate::interpreter::{
-    error::FruError,
-    identifier::{Identifier, OperatorIdentifier},
-    value::{fru_value::FruValue, function_helpers::EvaluatedArgumentList, operator::AnyOperator},
+use crate::{
+    fru_err_res,
+    interpreter::{
+        error::FruError,
+        identifier::{Identifier, OperatorIdentifier},
+        value::{
+            fru_value::FruValue, function_helpers::EvaluatedArgumentList, operator::AnyOperator,
+        },
+    },
 };
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash)]
@@ -18,28 +23,28 @@ pub trait INativeObject: Debug {
 
     fn get_type(&self) -> FruValue;
 
-    fn call(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_res(format!("`{:?}` is not invokable ", self.get_type()))
+    fn call(self: Rc<Self>, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
+        fru_err_res!("`{:?}` is not invokable ", self.get_type())
     }
 
-    fn instantiate(&self, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        FruError::new_res(format!("`{:?}` is not instantiatable", self.get_type()))
+    fn instantiate(self: Rc<Self>, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
+        fru_err_res!("`{:?}` is not instantiatable", self.get_type())
     }
 
-    fn get_prop(&self, _ident: Identifier) -> Result<FruValue, FruError> {
-        FruError::new_res(format!("cannot access prop of `{:?}`", self.get_type()))
+    fn get_prop(self: Rc<Self>, _ident: Identifier) -> Result<FruValue, FruError> {
+        fru_err_res!("cannot access prop of `{:?}`", self.get_type())
     }
 
-    fn set_prop(&self, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
-        FruError::new_res(format!("cannot set prop of `{:?}`", self.get_type()))
+    fn set_prop(self: Rc<Self>, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
+        fru_err_res!("cannot set prop of `{:?}`", self.get_type())
     }
 
-    fn get_operator(&self, _ident: OperatorIdentifier) -> Option<AnyOperator> {
+    fn get_operator(self: Rc<Self>, _ident: OperatorIdentifier) -> Option<AnyOperator> {
         unimplemented!();
     }
 
     fn set_operator(
-        &self,
+        self: Rc<Self>,
         _ident: OperatorIdentifier,
         _value: AnyOperator,
     ) -> Result<(), FruError> {
@@ -56,9 +61,13 @@ pub struct NativeObject {
 
 impl NativeObject {
     pub fn new_value<T: INativeObject + 'static>(o: T) -> FruValue {
-        FruValue::NativeObject(Self {
+        FruValue::Native(Self {
             internal: Rc::new(o),
         })
+    }
+
+    pub fn new_value_rc<T: INativeObject + 'static>(o: Rc<T>) -> FruValue {
+        FruValue::Native(Self { internal: o })
     }
 
     pub fn get_type(&self) -> FruValue {
@@ -70,23 +79,23 @@ impl NativeObject {
     }
 
     pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        self.internal.call(args)
+        self.internal.clone().call(args)
     }
 
     pub fn instantiate(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        self.internal.instantiate(args)
+        self.internal.clone().instantiate(args)
     }
 
     pub fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
-        self.internal.get_prop(ident)
+        self.internal.clone().get_prop(ident)
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
-        self.internal.set_prop(ident, value)
+        self.internal.clone().set_prop(ident, value)
     }
 
     pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
-        self.internal.get_operator(ident)
+        self.internal.clone().get_operator(ident)
     }
 
     pub fn set_operator(
@@ -94,18 +103,18 @@ impl NativeObject {
         ident: OperatorIdentifier,
         value: AnyOperator,
     ) -> Result<(), FruError> {
-        self.internal.set_operator(ident, value)
+        self.internal.clone().set_operator(ident, value)
     }
 
     pub fn fru_clone(&self) -> FruValue {
-        FruValue::NativeObject(NativeObject {
+        FruValue::Native(NativeObject {
             internal: self.internal.clone().fru_clone(),
         })
     }
 }
 
 pub fn cast_object<T: INativeObject + 'static>(o: &FruValue) -> Option<Rc<T>> {
-    if let FruValue::NativeObject(o) = o {
+    if let FruValue::Native(o) = o {
         o.internal.clone().as_any().downcast().ok()
     } else {
         None

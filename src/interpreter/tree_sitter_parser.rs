@@ -26,7 +26,7 @@ use crate::{
             native_object::NativeObject,
         },
     },
-    stdlib::builtins::builtin_string_instance::BuiltinStringInstance,
+    stdlib::prelude::builtin_string_instance::BuiltinStringInstance,
 };
 
 #[derive(Error, Debug)]

@@ -15,7 +15,7 @@ use crate::{
             native_object::cast_object,
         },
     },
-    stdlib::builtins::{
+    stdlib::prelude::{
         builtin_scope_instance::BuiltinScopeInstance,
         builtin_string_instance::BuiltinStringInstance,
     },

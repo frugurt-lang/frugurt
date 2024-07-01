@@ -5,6 +5,7 @@ use uid::Id;
 use frugurt_macros::static_ident;
 
 use crate::{
+    fru_err_res,
     interpreter::{
         error::FruError,
         identifier::{Identifier, OperatorIdentifier},
@@ -19,7 +20,7 @@ use crate::{
             operator::AnyOperator,
         },
     },
-    stdlib::builtins::{
+    stdlib::prelude::{
         builtin_bool_type::BuiltinBoolType, builtin_function_type::BuiltinFunctionType,
         builtin_nah_type::BuiltinNahType, builtin_number_type::BuiltinNumberType,
         builtin_type_type::BuiltinTypeType,
@@ -46,21 +47,21 @@ pub enum FruValue {
     // oop
     Type(FruType),
     Object(FruObject),
-    NativeObject(NativeObject),
+    Native(NativeObject),
 }
 
 impl FruValue {
     pub fn get_type(&self) -> FruValue {
         match self {
-            FruValue::Nah => BuiltinNahType::get_value(),
-            FruValue::Number(_) => BuiltinNumberType::get_value(),
-            FruValue::Bool(_) => BuiltinBoolType::get_value(),
-            FruValue::Function(_) => BuiltinFunctionType::get_value(),
-            FruValue::BuiltinFunction(_) => BuiltinFunctionType::get_value(),
-            FruValue::Curried(_) => BuiltinFunctionType::get_value(), // FIXME
-            FruValue::Type(_) => BuiltinTypeType::get_value(),
+            FruValue::Nah => BuiltinNahType::get_singleton(),
+            FruValue::Number(_) => BuiltinNumberType::get_singleton(),
+            FruValue::Bool(_) => BuiltinBoolType::get_singleton(),
+            FruValue::Function(_) => BuiltinFunctionType::get_singleton(),
+            FruValue::BuiltinFunction(_) => BuiltinFunctionType::get_singleton(),
+            FruValue::Curried(_) => BuiltinFunctionType::get_singleton(), // FIXME
+            FruValue::Type(_) => BuiltinTypeType::get_singleton(),
             FruValue::Object(obj) => obj.get_type(),
-            FruValue::NativeObject(obj) => obj.get_type(),
+            FruValue::Native(obj) => obj.get_type(),
         }
     }
 
@@ -68,7 +69,7 @@ impl FruValue {
         match self {
             FruValue::Type(obj) => obj.get_uid(),
             FruValue::Object(obj) => obj.get_uid(),
-            FruValue::NativeObject(obj) => obj.get_uid(),
+            FruValue::Native(obj) => obj.get_uid(),
 
             _ => panic!(), // FIXME
         }
@@ -79,8 +80,8 @@ impl FruValue {
             FruValue::Function(fun) => fun.call(args),
             FruValue::BuiltinFunction(fun) => fun.call(args),
             FruValue::Curried(fun) => fun.call(args),
-            FruValue::NativeObject(obj) => obj.call(args),
-            _ => FruError::new_res(format!("`{:?}` is not invokable", self.get_type())),
+            FruValue::Native(obj) => obj.call(args),
+            _ => fru_err_res!("`{:?}` is not invokable", self.get_type()),
         }
     }
 
@@ -88,11 +89,11 @@ impl FruValue {
         match self {
             FruValue::Curried(curried) => Ok(curried.curry_call(args)),
 
-            FruValue::Function(_) | FruValue::BuiltinFunction(_) | FruValue::NativeObject(_) => {
+            FruValue::Function(_) | FruValue::BuiltinFunction(_) | FruValue::Native(_) => {
                 Ok(Curried::new_value(self.clone(), args))
             }
 
-            _ => FruError::new_res(format!("`{:?}` is not invokable", self.get_type())),
+            _ => fru_err_res!("`{:?}` is not invokable", self.get_type()),
         }
     }
 
@@ -100,9 +101,9 @@ impl FruValue {
         match self {
             FruValue::Type(type_) => type_.instantiate(args),
 
-            FruValue::NativeObject(obj) => obj.instantiate(args),
+            FruValue::Native(obj) => obj.instantiate(args),
 
-            _ => FruError::new_res(format!("`{:?}` is not instantiatable", self.get_type())),
+            _ => fru_err_res!("`{:?}` is not instantiatable", self.get_type()),
         }
     }
 
@@ -112,9 +113,9 @@ impl FruValue {
 
             FruValue::Object(obj) => obj.get_prop(ident),
 
-            FruValue::NativeObject(obj) => obj.get_prop(ident),
+            FruValue::Native(obj) => obj.get_prop(ident),
 
-            _ => FruError::new_res(format!("cannot access prop of `{:?}`", self.get_type())),
+            _ => fru_err_res!("cannot access prop of `{:?}`", self.get_type()),
         }
     }
 
@@ -124,9 +125,9 @@ impl FruValue {
 
             FruValue::Object(obj) => obj.set_prop(ident, value),
 
-            FruValue::NativeObject(obj) => obj.set_prop(ident, value),
+            FruValue::Native(obj) => obj.set_prop(ident, value),
 
-            _ => FruError::new_res(format!("cannot set prop of `{:?}`", self.get_type())),
+            _ => fru_err_res!("cannot set prop of `{:?}`", self.get_type()),
         }
     }
 
@@ -134,7 +135,7 @@ impl FruValue {
         match self {
             FruValue::Type(t) => t.get_operator(ident),
 
-            FruValue::NativeObject(obj) => obj.get_operator(ident),
+            FruValue::Native(obj) => obj.get_operator(ident),
 
             _ => panic!(),
         }
@@ -148,7 +149,7 @@ impl FruValue {
         match self {
             FruValue::Type(t) => t.set_operator(ident, value),
 
-            FruValue::NativeObject(obj) => obj.set_operator(ident, value),
+            FruValue::Native(obj) => obj.set_operator(ident, value),
 
             _ => panic!(),
         }
@@ -158,7 +159,7 @@ impl FruValue {
         match self {
             FruValue::Object(obj) => obj.fru_clone(),
 
-            FruValue::NativeObject(obj) => obj.fru_clone(),
+            FruValue::Native(obj) => obj.fru_clone(),
 
             _ => self.clone(),
         }
@@ -174,7 +175,7 @@ impl PartialEq for FruValue {
             (FruValue::Bool(left), FruValue::Bool(right)) => left == right,
             (FruValue::Type(left), FruValue::Type(right)) => left == right,
             (FruValue::Object(left), FruValue::Object(right)) => left == right,
-            (FruValue::NativeObject(left), FruValue::NativeObject(right)) => {
+            (FruValue::Native(left), FruValue::Native(right)) => {
                 let op = left.get_type().get_operator(OperatorIdentifier::new(
                     static_ident!("=="),
                     right.get_type().get_uid(),
@@ -205,7 +206,7 @@ impl Debug for FruValue {
             FruValue::Curried(x) => Debug::fmt(x, f),
             FruValue::Type(x) => Debug::fmt(x, f),
             FruValue::Object(x) => Debug::fmt(x, f),
-            FruValue::NativeObject(x) => Debug::fmt(x, f),
+            FruValue::Native(x) => Debug::fmt(x, f),
         }
     }
 }

@@ -3,6 +3,7 @@
 use std::{collections::HashMap, io, io::Write};
 
 use crate::{
+    fru_err_res,
     interpreter::{
         error::FruError,
         identifier::Identifier,
@@ -13,7 +14,7 @@ use crate::{
             native_object::NativeObject,
         },
     },
-    stdlib::builtins::builtin_string_instance::BuiltinStringInstance,
+    stdlib::prelude::builtin_string_instance::BuiltinStringInstance,
 };
 
 pub fn builtin_functions() -> HashMap<Identifier, FruValue> {
@@ -58,9 +59,10 @@ fn b_assert_eq(args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
     if args.args[0].1 == args.args[1].1 {
         Ok(FruValue::Bool(true))
     } else {
-        FruError::new_res(format!(
+        fru_err_res!(
             "assertion failed: {:?} != {:?}",
-            args.args[0].1, args.args[1].1
-        ))
+            args.args[0].1,
+            args.args[1].1
+        )
     }
 }

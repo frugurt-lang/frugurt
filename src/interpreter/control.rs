@@ -1,4 +1,7 @@
-use crate::interpreter::{error::FruError, value::fru_value::FruValue};
+use crate::{
+    fru_err_res,
+    interpreter::{error::FruError, value::fru_value::FruValue},
+};
 
 #[derive(Debug)]
 pub enum Control {
@@ -9,8 +12,8 @@ pub enum Control {
 }
 
 impl Control {
-    pub fn new_err<T>(message: impl Into<String>) -> Result<T, Control> {
-        Err(Control::Error(FruError::new(message.into())))
+    pub fn new_err<T>(message: impl ToString) -> Result<T, Control> {
+        Err(Control::Error(FruError::new(message)))
     }
 }
 
@@ -25,7 +28,7 @@ pub fn returned(x: Result<FruValue, Control>) -> Result<FruValue, FruError> {
         Ok(x) => Ok(x),
         Err(Control::Return(x)) => Ok(x),
         Err(Control::Error(err)) => Err(err),
-        Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
+        Err(unexpected) => fru_err_res!("unexpected signal {:?}", unexpected),
     }
 }
 
@@ -34,7 +37,7 @@ pub fn returned_unit(x: Result<(), Control>) -> Result<FruValue, FruError> {
         Ok(()) => Ok(FruValue::Nah),
         Err(Control::Return(x)) => Ok(x),
         Err(Control::Error(err)) => Err(err),
-        Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
+        Err(unexpected) => fru_err_res!("unexpected signal {:?}", unexpected),
     }
 }
 
@@ -43,6 +46,6 @@ pub fn returned_nothing(x: Result<(), Control>) -> Result<(), FruError> {
         Ok(()) => Ok(()),
         Err(Control::Return(FruValue::Nah)) => Ok(()),
         Err(Control::Error(err)) => Err(err),
-        Err(unexpected) => FruError::new_res(format!("unexpected signal {:?}", unexpected)),
+        Err(unexpected) => fru_err_res!("unexpected signal {:?}", unexpected),
     }
 }

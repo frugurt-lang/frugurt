@@ -15,7 +15,7 @@ use crate::{
             operator::AnyOperator,
         },
     },
-    stdlib::builtins::builtin_scope_instance::BuiltinScopeInstance,
+    stdlib::prelude::builtin_scope_instance::BuiltinScopeInstance,
 };
 
 #[derive(Debug, Clone)]

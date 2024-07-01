@@ -10,7 +10,7 @@ use crate::{
 pub struct BuiltinNumberType;
 
 impl BuiltinNumberType {
-    pub fn get_value() -> FruValue {
+    pub fn get_singleton() -> FruValue {
         static_native_value!(BuiltinNumberType)
     }
 }
