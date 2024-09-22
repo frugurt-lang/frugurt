@@ -17,7 +17,7 @@ struct Vec {
     }
 }
 
-let v = Vec :{ x: 3, y: 4 };
+let v = Vec [ x: 3, y: 4 ];
 print(v.Length); // 5
 
 v.Length = 1;

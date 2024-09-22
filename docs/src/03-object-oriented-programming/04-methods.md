@@ -19,7 +19,7 @@ struct Vector {
     }
 }
 
-let v = Vector:{ 4, 5 };
+let v = Vector [4, 5 ];
 
 v.rotate90();
 

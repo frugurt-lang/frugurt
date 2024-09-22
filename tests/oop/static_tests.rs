@@ -8,9 +8,10 @@ fn test_static_error() {
                 static val = 5 / 0;
             }
 
-            let b = Box :{ };
+            let b = Box [];
         "#)
 }
+
 
 #[test]
 fn test_vector() {
@@ -33,11 +34,11 @@ fn test_vector() {
                 }
 
                 static new45(x) {
-                    Vec2:{x * m, x * m}
+                    Vec2 [x * m, x * m ]
                 }
             }
 
-            let v = Vec2 :{ 1, 2 };
+            let v = Vec2 [ 1, 2 ];
 
             v.swap();
             assert_eq(v.x, 2);

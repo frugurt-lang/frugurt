@@ -43,7 +43,7 @@ struct Vector {
     y;
 } impl {
     static new(x, y) {
-        return Vector:{ x, y };
+        return Vector [x, y ];
     }
 
     add(other) {

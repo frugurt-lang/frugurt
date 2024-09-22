@@ -7,7 +7,7 @@ fn test_class() {
                 f;
             }
 
-            let b = Box :{ f: 5 };
+            let b = Box [ f: 5 ];
             assert_eq(b.f, 5);
 
             b.f = 10;

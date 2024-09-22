@@ -1,0 +1,48 @@
+use crate::common::*;
+
+#[derive(Debug)]
+pub enum Control {
+    Continue,
+    Break,
+    Return(FruValue),
+    Error(FruError),
+}
+
+impl Control {
+    pub fn new_err<T>(message: impl ToString) -> Result<T, Control> {
+        Err(Control::Error(FruError::new(message)))
+    }
+}
+
+impl From<FruError> for Control {
+    fn from(err: FruError) -> Self {
+        Control::Error(err)
+    }
+}
+
+pub fn returned(x: Result<FruValue, Control>) -> Result<FruValue, FruError> {
+    match x {
+        Ok(x) => Ok(x),
+        Err(Control::Return(x)) => Ok(x),
+        Err(Control::Error(err)) => Err(err),
+        Err(unexpected) => fru_err_res!("unexpected signal {:?}", unexpected),
+    }
+}
+
+pub fn returned_unit(x: Result<(), Control>) -> Result<FruValue, FruError> {
+    match x {
+        Ok(()) => Ok(FruValue::Nah),
+        Err(Control::Return(x)) => Ok(x),
+        Err(Control::Error(err)) => Err(err),
+        Err(unexpected) => fru_err_res!("unexpected signal {:?}", unexpected),
+    }
+}
+
+pub fn returned_nothing(x: Result<(), Control>) -> Result<(), FruError> {
+    match x {
+        Ok(()) => Ok(()),
+        Err(Control::Return(FruValue::Nah)) => Ok(()),
+        Err(Control::Error(err)) => Err(err),
+        Err(unexpected) => fru_err_res!("unexpected signal {:?}", unexpected),
+    }
+}

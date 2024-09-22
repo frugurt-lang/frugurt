@@ -18,7 +18,7 @@ struct Vector {
     pub y : Number;
 }
 
-let v = Vector:{ x: 5, y: 10 };
+let v = Vector [ x: 5, y: 10 ];
 
 print(v); // Vector{x=5, pub y: Number=10}
 
@@ -29,6 +29,6 @@ a.x = 1;
 
 print(v, a); // Vector{x=5, pub y: Number=10} Vector{x=1, pub y: Number=10}
 
-let v2 = Vector:{ x: 5, y: 10 };
-// let v2 = Vector:{ 5, y: 10 }; // would throw an error
+let v2 = Vector [ x: 5, y: 10 ];
+// let v2 = Vector [ 5, y: 10 ]; // would throw an error
 ```

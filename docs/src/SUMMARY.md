@@ -10,7 +10,6 @@
   - [Comments](./02-common-concepts/03-comments.md)
   - [Control Flow](./02-common-concepts/04-control-flow.md)
   - [Functions](./02-common-concepts/05-functions.md)
-  - [Currying](./02-common-concepts/06-currying.md)
 - [Object oriented programming](./03-object-oriented-programming/01-index.md)
   - [Basics](./03-object-oriented-programming/02-basics.md)
   - [Operators](./03-object-oriented-programming/03-operators.md)

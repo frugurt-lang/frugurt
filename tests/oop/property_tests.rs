@@ -17,7 +17,7 @@ fn test_basics() {
                 }
             }
 
-            let v = Vec2 :{ x: 3, y: 4 };
+            let v = Vec2 [ x: 3, y: 4 ];
             assert_eq(v.Length, 5);
 
             v.Length = 1;
@@ -37,7 +37,7 @@ fn test_getter_arrow() {
                 }
             }
 
-            let t = Thing :{ x: 3 };
+            let t = Thing [ x: 3 ];
 
             assert_eq(t.Foo, 4);
         "#)
@@ -60,7 +60,7 @@ fn test_other() {
                 }
             }
 
-            let t = Thing :{ x: 3 };
+            let t = Thing [ x: 3 ];
 
             t.Foo = 5;
             assert_eq(t.x, 10);
@@ -78,7 +78,7 @@ fn test_no_getter() {
                 X {}
             }
 
-            let t = Thing :{};
+            let t = Thing [];
 
             t.X;
         "#)
@@ -92,7 +92,7 @@ fn test_no_setter() {
                 X {}
             }
 
-            let t = Thing :{};
+            let t = Thing [];
 
             t.X = 3;
         "#)
@@ -134,7 +134,7 @@ fn test_unexpected_signal() {
                 }
             }
 
-            let t = Thing :{};
+            let t = Thing [];
 
             t.X = 3;
         "#)
@@ -152,7 +152,7 @@ fn test_error_propagation() {
                 }
             }
 
-            let t = Thing :{};
+            let t = Thing [];
 
             t.X = 3;
         "#)
@@ -182,7 +182,7 @@ fn test_static_basics() {
 
             assert_eq(T.Foo, 3);
 
-            let t = T :{};
+            let t = T [];
 
             assert_eq(t.Foo, 3);
         "#)

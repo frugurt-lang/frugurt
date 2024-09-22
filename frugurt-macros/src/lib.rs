@@ -42,14 +42,14 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
                 }),
 
                 "get_uid" => item.items.push(syn::parse_quote! {
-                    fn get_uid(&self) -> uid::Id<crate::interpreter::value::native_object::OfObject> {
+                    fn get_uid(&self) -> uid::Id<crate::common::OfObject> {
                         crate::static_uid!()
                     }
                 }),
 
                 "get_type" => item.items.push(syn::parse_quote! {
                     fn get_type(&self) -> FruValue {
-                        crate::stdlib::prelude::builtin_type_type::BuiltinTypeType::get_singleton()
+                        crate::stdlib::common::BuiltinTypeType::get_singleton()
                     }
                 }),
 
@@ -58,20 +58,20 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
                     item.items.push(syn::parse_quote! {
                         fn get_operator(
                             self: std::rc::Rc<Self>,
-                            ident: crate::interpreter::identifier::OperatorIdentifier,
-                        ) -> Option<crate::interpreter::value::operator::AnyOperator> {
+                            ident: crate::common::OperatorIdentifier,
+                        ) -> Option<crate::common::AnyOperator> {
                             OPERATORS.lock().unwrap().get(&ident).cloned()
                         }
                     });
                     item.items.push(syn::parse_quote! {
                         fn set_operator(
                             self: std::rc::Rc<Self>,
-                            ident: crate::interpreter::identifier::OperatorIdentifier,
-                            value: crate::interpreter::value::operator::AnyOperator,
-                        ) -> Result<(), crate::interpreter::error::FruError> {
+                            ident: crate::common::OperatorIdentifier,
+                            value: crate::common::AnyOperator,
+                        ) -> Result<(), crate::common::FruError> {
                             match OPERATORS.lock().unwrap().entry(ident) {
                                 std::collections::hash_map::Entry::Occupied(_) => {
-                                    crate::interpreter::error::FruError::new_res(format!("operator `{:?}` is already set", ident.op))
+                                    crate::common::FruError::new_res(format!("operator `{:?}` is already set", ident.op))
                                 }
                                 std::collections::hash_map::Entry::Vacant(entry) => {
                                     entry.insert(value);
@@ -99,7 +99,7 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
             "get_uid" => 2,
             "get_type" => 3,
             "call" => 4,
-            "instantiate" => 5,
+            "index" => 5,
             "get_prop" => 6,
             "set_prop" => 7,
             "get_operator" => 8,
@@ -117,8 +117,8 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
             static OPERATORS: once_cell::sync::Lazy<
                 std::sync::Mutex<
                     std::collections::HashMap<
-                        crate::interpreter::identifier::OperatorIdentifier,
-                        crate::interpreter::value::operator::AnyOperator,
+                        crate::common::OperatorIdentifier,
+                        crate::common::AnyOperator,
                     >,
                 >,
             > = once_cell::sync::Lazy::new(Default::default);

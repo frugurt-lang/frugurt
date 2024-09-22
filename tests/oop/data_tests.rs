@@ -8,7 +8,7 @@ fn test_data() {
                 f;
             }
 
-            let b = Box :{ 5 };
+            let b = Box [ 5 ];
             assert_eq(b.f, 5);
 
             b.f = 10;

@@ -1,0 +1,22 @@
+use std::fmt::Debug;
+
+use frugurt_macros::derive_nat;
+
+use crate::common::*;
+
+pub struct BuiltinTypeType; // type of all types
+
+impl BuiltinTypeType {
+    pub fn get_singleton() -> FruValue {
+        static_native_value!(BuiltinTypeType)
+    }
+}
+
+#[derive_nat(as_any, get_uid, get_type, get_set_op, fru_clone)]
+impl INativeObject for BuiltinTypeType {}
+
+impl Debug for BuiltinTypeType {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "Type")
+    }
+}

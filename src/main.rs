@@ -1,11 +1,11 @@
 use clap::Parser;
 
-use std::{path::PathBuf, time::Instant};
-
-use crate::interpreter::runner::execute_file;
-
-mod interpreter;
-mod stdlib;
+use interpreter::interpreter::Interpreter;
+use std::{
+    fs::read_to_string,
+    path::PathBuf,
+    time::Instant,
+};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -21,7 +21,19 @@ fn main() {
 
     let start = Instant::now();
 
-    let result = execute_file(args.filename.as_path());
+    let path = args.filename.as_path();
+
+    let source_code = match read_to_string(path) {
+        Ok(code) => code,
+        Err(err) => {
+            eprintln!("Error reading file {path:?} \n {err}");
+            std::process::exit(1);
+        }
+    };
+
+    let interpreter = Interpreter::new();
+
+    let result = interpreter.execute_code(source_code);
 
     if let Err(err) = &result {
         eprintln!("{}", err);

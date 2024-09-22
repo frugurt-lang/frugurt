@@ -21,7 +21,7 @@ fn test_scope() {
                 Box
             };
 
-            let b = Box :{ };
+            let b = Box [];
 
             assert_eq(b.getAndInc(), 8);
             Box.inc();
@@ -38,24 +38,24 @@ fn test_operators() {
             }
 
             operator + (a : Vec2, b : Vec2) {
-                Vec2 :{ a.x + b.x, a.y + b.y }
+                Vec2 [ a.x + b.x, a.y + b.y ]
             }
 
             commutative operator * (a : Vec2, k : Number) {
-                Vec2 :{ a.x * k, a.y * k }
+                Vec2 [ a.x * k, a.y * k ]
             }
 
             operator +-*/%=<>&|^!? (a : Number, k : Number) {
                 a * k
             }
 
-            let v1 = Vec2 :{ 1, 2 };
-            let v2 = Vec2 :{ 3, 4 };
+            let v1 = Vec2 [ 1, 2 ];
+            let v2 = Vec2 [ 3, 4 ];
 
-            assert_eq(v1 + v2, Vec2 :{ 4, 6 });
+            assert_eq(v1 + v2, Vec2 [ 4, 6 ]);
 
-            assert_eq(v1 * 2, Vec2 :{ 2, 4 });
-            assert_eq(5 * v1 * 2, Vec2 :{ 10, 20 });
+            assert_eq(v1 * 2, Vec2 [ 2, 4 ]);
+            assert_eq(5 * v1 * 2, Vec2 [ 10, 20 ]);
 
             assert_eq(6 +-*/%=<>&|^!? 9, 54);
 
@@ -96,8 +96,8 @@ fn test_named_fields() {
                 y;
             }
 
-            let v = Vec2 :{ x: 1, y: 2 };
-            let v2 = Vec2 :{ y: 2, x: 1 };
+            let v = Vec2 [ x: 1, y: 2 ];
+            let v2 = Vec2 [ y: 2, x: 1 ];
 
             assert_eq(v, v2);
         "#)
@@ -112,7 +112,7 @@ fn test_named_error_1() {
                 y;
             }
 
-            Vec2 :{};
+            Vec2 [];
         "#)
 }
 
@@ -125,7 +125,7 @@ fn test_named_error_2() {
                 y;
             }
 
-            Vec2 :{x: 1, x: 2};
+            Vec2 [x: 1, x: 2 ];
         "#)
 }
 
@@ -138,7 +138,7 @@ fn test_named_error_3() {
                 y;
             }
 
-            Vec2 :{x: 1, c: 2};
+            Vec2 [x: 1, c: 2 ];
         "#)
 }
 
@@ -151,7 +151,7 @@ fn test_named_error_4() {
                 y;
             }
 
-            Vec2 :{1, y: 2};
+            Vec2 [1, y: 2 ];
         "#)
 }
 
@@ -164,7 +164,7 @@ fn test_named_error_5() {
                 y;
             }
 
-            Vec2 :{x: 1, y: 1, z: 2};
+            Vec2 [x: 1, y: 1, z: 2 ];
         "#)
 }
 
@@ -177,7 +177,7 @@ fn test_named_error_6() {
                 y;
             }
 
-            Vec2 :{ 1 };
+            Vec2 [ 1 ];
         "#)
 }
 

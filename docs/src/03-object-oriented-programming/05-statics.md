@@ -9,7 +9,7 @@ struct Vector {
     static scaler = 10;
 } impl {
     static scale(v) {
-        Vector :{ v.x * scaler, v.y * scaler}
+        Vector [ v.x * scaler, v.y * scaler ]
     }
 
     static double_scaler() {
@@ -17,7 +17,7 @@ struct Vector {
     }
 }
 
-let v = Vector :{ 1, 2 };
+let v = Vector [ 1, 2 ];
 
 print(Vector.scale(v)); // {x: 10, y: 20}
 

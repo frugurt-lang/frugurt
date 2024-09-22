@@ -27,8 +27,8 @@ commutative operator * (k : Number, b : Vector) {
     }
 }
 
-let a = Vector :{ 1, 2 };
-let b = Vector :{ 3, 4 };
+let a = Vector [ 1, 2 ];
+let b = Vector [ 3, 4 ];
 
 print(a + b); // Vector{x=4, y=6}
 print(a * 2, 2 * a); // Vector{x=2, y=4} Vector{x=2, y=4}

@@ -78,21 +78,6 @@ fn test_eval_3() {
 }
 
 #[test]
-fn test_overall() {
-    run(r#"
-            let f = fn (a, b) {a + b};
-
-            let dec = fn (func) {
-                fn (w) { func$(w) }
-            };
-
-            let g = dec(f);
-
-            assert_eq(g(1)(2), 3);
-        "#)
-}
-
-#[test]
 fn test_named() {
     run(r#"
             let f = fn (a = 1, b = 2) {2 * a + b};

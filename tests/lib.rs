@@ -1,10 +1,6 @@
-use crate::interpreter::runner::execute_source_code;
+extern crate interpreter;
 
-#[path = "../src/interpreter/mod.rs"]
-mod interpreter;
-
-#[path = "../src/stdlib/mod.rs"]
-mod stdlib;
+use interpreter::interpreter::Interpreter;
 
 mod builtin;
 mod expression;
@@ -14,7 +10,9 @@ mod scope_manipulation;
 mod statement;
 
 pub fn run(code: &str) {
-    if let Err(err) = execute_source_code(code.to_owned()) {
+    let interpreter = Interpreter::new();
+    
+    if let Err(err) = interpreter.execute_code(code.to_owned()) {
         panic!("{}", err)
     }
 }
