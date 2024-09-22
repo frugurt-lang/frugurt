@@ -17,7 +17,7 @@ pub use crate::{
         fru_value::{FruValue, TFnBuiltin, TOpBuiltin},
         function_helpers::{ArgumentList, EvaluatedArgumentList, FormalParameters},
         native_object::{cast_object, INativeObject, NativeObject, OfObject},
-        operator::AnyOperator
-    }
+        operator::AnyOperator,
+    },
 };
 pub use frugurt_macros::derive_nat;

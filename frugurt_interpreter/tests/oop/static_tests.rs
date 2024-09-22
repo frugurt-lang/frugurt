@@ -12,7 +12,6 @@ fn test_static_error() {
         "#)
 }
 
-
 #[test]
 fn test_vector() {
     run(r#"

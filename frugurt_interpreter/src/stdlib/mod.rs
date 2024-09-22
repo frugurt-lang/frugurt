@@ -1,13 +1,12 @@
+pub mod common;
 pub mod helpers;
 pub mod prelude;
-pub mod common;
 
 #[macro_export]
 macro_rules! static_uid {
     () => {{
-        static ID: once_cell::sync::Lazy<
-            uid::Id<$crate::common::OfObject>,
-        > = once_cell::sync::Lazy::new(uid::Id::new);
+        static ID: once_cell::sync::Lazy<uid::Id<$crate::common::OfObject>> =
+            once_cell::sync::Lazy::new(uid::Id::new);
         *ID
     }};
 }
@@ -15,9 +14,8 @@ macro_rules! static_uid {
 #[macro_export]
 macro_rules! static_native_value {
     ($t:tt) => {{
-        static VALUE: once_cell::sync::Lazy<FruValue> = once_cell::sync::Lazy::new(|| {
-            $crate::common::NativeObject::new_value($t)
-        });
+        static VALUE: once_cell::sync::Lazy<FruValue> =
+            once_cell::sync::Lazy::new(|| $crate::common::NativeObject::new_value($t));
         VALUE.clone()
     }};
 }

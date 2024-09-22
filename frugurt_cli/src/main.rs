@@ -1,11 +1,7 @@
 use clap::Parser;
 
-use interpreter::interpreter::Interpreter;
-use std::{
-    fs::read_to_string,
-    path::PathBuf,
-    time::Instant,
-};
+use frugurt_interpreter::interpreter::Interpreter;
+use std::{fs::read_to_string, path::PathBuf, time::Instant};
 
 #[derive(Parser, Debug)]
 struct Args {
@@ -17,10 +13,9 @@ struct Args {
 }
 
 fn main() {
-    let args: Args = Args::parse();
-
     let start = Instant::now();
 
+    let args: Args = Args::parse();
     let path = args.filename.as_path();
 
     let source_code = match read_to_string(path) {
@@ -32,7 +27,6 @@ fn main() {
     };
 
     let interpreter = Interpreter::new();
-
     let result = interpreter.execute_code(source_code);
 
     if let Err(err) = &result {

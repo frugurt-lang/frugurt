@@ -1,5 +1,5 @@
 [package]
-name = "interpreter"
+name = "frugurt_interpreter"
 version = "0.1.0"
 edition = "2021"
 
@@ -12,7 +12,7 @@ tree-sitter = "0.23.0"
 #tree-sitter-frugurt = "0.0.11"
 tree-sitter-frugurt = { path = "../../tree-sitter-frugurt" }
 uid = "0.1.7"
-frugurt-macros = { path = "../frugurt-macros" }
+frugurt_macros = { path = "../frugurt_macros" }
 
 [dev-dependencies]
 tempfile = "3.10.1"
@@ -23,4 +23,4 @@ cc = "*"
 [[test]]
 name = "integration"
 harness = true
-path = "../tests/lib.rs"
+path = "tests/lib.rs"

@@ -1,6 +1,4 @@
-extern crate interpreter;
-
-use interpreter::interpreter::Interpreter;
+use frugurt_interpreter::interpreter::Interpreter;
 
 mod builtin;
 mod expression;
@@ -11,7 +9,7 @@ mod statement;
 
 pub fn run(code: &str) {
     let interpreter = Interpreter::new();
-    
+
     if let Err(err) = interpreter.execute_code(code.to_owned()) {
         panic!("{}", err)
     }

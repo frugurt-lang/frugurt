@@ -170,7 +170,7 @@ impl FruExpression {
                     "Expected `Bool` in if condition, got `{:?}`",
                     unexpected.get_type()
                 )),
-            }
+            },
         }
     }
 }

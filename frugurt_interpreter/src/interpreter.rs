@@ -19,9 +19,7 @@ impl Interpreter {
             Err(err) => return Err(FruError::new(err.to_string())),
         };
 
-        let signal = ast.execute(
-            Scope::new_with_parent(self.global_scope),
-        );
+        let signal = ast.execute(Scope::new_with_parent(self.global_scope));
 
         match signal {
             Ok(()) => Ok(()),

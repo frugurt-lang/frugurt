@@ -12,10 +12,6 @@ pub use crate::stdlib::{
         builtin_type_type::BuiltinTypeType,
         functions::builtin_functions,
         variables::builtin_variables,
-        vec::{
-            builtin_vec_instance::BuiltinVecInstance,
-            builtin_vec_type::BuiltinVecType,
-        },
+        vec::{builtin_vec_instance::BuiltinVecInstance, builtin_vec_type::BuiltinVecType},
     },
 };
-

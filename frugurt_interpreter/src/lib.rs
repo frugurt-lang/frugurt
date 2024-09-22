@@ -2,6 +2,7 @@ mod stdlib;
 mod value;
 
 mod ast_helpers;
+mod common;
 mod control;
 mod error;
 mod expression;
@@ -11,4 +12,3 @@ pub mod interpreter;
 mod scope;
 mod statement;
 mod tree_sitter_parser;
-mod common;

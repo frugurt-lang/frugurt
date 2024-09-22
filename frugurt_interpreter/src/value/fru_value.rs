@@ -7,7 +7,6 @@ use frugurt_macros::static_ident;
 use crate::common::*;
 use crate::stdlib::common::*;
 
-
 pub type TFnBuiltin = fn(EvaluatedArgumentList) -> Result<FruValue, FruError>;
 pub type TOpBuiltin = fn(FruValue, FruValue) -> Result<FruValue, FruError>;
 

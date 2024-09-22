@@ -3,7 +3,6 @@ use std::{cell::RefCell, collections::HashMap, rc::Rc};
 use crate::common::*;
 use crate::stdlib::common::BuiltinScopeInstance;
 
-
 #[derive(Debug, Clone)]
 pub enum FruStatement {
     SourceCode {
