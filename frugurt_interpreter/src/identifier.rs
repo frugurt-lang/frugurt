@@ -6,9 +6,8 @@ use std::{
 };
 
 use once_cell::sync::Lazy;
-use uid::Id;
 
-use crate::common::*;
+use crate::common::IdOfObject;
 
 // this map is used for Identifier visualization
 static BACKWARDS_MAP: Lazy<Mutex<HashMap<u64, String>>> = Lazy::new(Default::default);
@@ -21,8 +20,9 @@ pub struct Identifier {
 
 #[derive(Hash, PartialEq, Eq, Copy, Clone)]
 pub struct OperatorIdentifier {
-    pub op: Identifier,
-    right: Id<OfObject>,
+    left: IdOfObject,
+    right: IdOfObject,
+    op: Identifier,
 }
 
 impl Identifier {
@@ -46,8 +46,8 @@ impl Identifier {
 }
 
 impl OperatorIdentifier {
-    pub fn new(op: Identifier, right: Id<OfObject>) -> Self {
-        Self { op, right }
+    pub fn new(left: IdOfObject, right: IdOfObject, op: Identifier) -> Self {
+        Self { left, right, op }
     }
 }
 
@@ -70,7 +70,7 @@ impl Display for Identifier {
 pub mod id {
     use frugurt_macros::static_ident;
 
-    use crate::common::*;
+    use crate::common::Identifier;
 
     // arithmetic
     pub const PLUS: Identifier = static_ident!("+");

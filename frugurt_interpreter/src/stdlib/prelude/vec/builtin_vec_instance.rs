@@ -13,7 +13,7 @@ use crate::stdlib::common::*;
 
 pub struct BuiltinVecInstance {
     value: RefCell<Vec<FruValue>>,
-    uid: Id<OfObject>,
+    uid: IdOfObject,
     method_push: OnceCell<FruValue>,
     at_method: OnceCell<FruValue>,
 }
@@ -47,14 +47,10 @@ impl BuiltinVecInstance {
     }
 }
 
-#[derive_nat(as_any, fru_clone)]
+#[derive_nat(as_any, get_type_uid)]
 impl INativeObject for BuiltinVecInstance {
-    fn get_uid(&self) -> Id<OfObject> {
+    fn get_uid(&self) -> IdOfObject {
         self.uid
-    }
-
-    fn get_type(&self) -> FruValue {
-        BuiltinVecType::get_singleton()
     }
 
     fn get_prop(self: Rc<Self>, ident: Identifier) -> Result<FruValue, FruError> {
@@ -65,7 +61,7 @@ impl INativeObject for BuiltinVecInstance {
         } else if ident == static_ident!("At") {
             Ok(self.at_method.get().unwrap().clone())
         } else {
-            fru_err_res!("`{:?}` has no prop `{}`", self.get_type(), ident)
+            fru_err_res!("vec has no prop `{}`", ident)
         }
     }
 }
@@ -83,7 +79,7 @@ fn method_push(
     mut args: EvaluatedArgumentList,
 ) -> Result<FruValue, FruError> {
     if args.args.len() != 1 {
-        return fru_err_res!("`{:?}` takes exactly one argument", this.get_type());
+        return fru_err_res!("Push takes exactly one argument");
     }
 
     this.value.borrow_mut().push(args.args.drain(..).next().unwrap().1);
@@ -96,7 +92,7 @@ fn method_at(
     mut args: EvaluatedArgumentList,
 ) -> Result<FruValue, FruError> {
     if args.args.len() != 1 {
-        return fru_err_res!("`{:?}` takes exactly one argument", this.get_type());
+        return fru_err_res!("At takes exactly one argument");
     }
 
     let index = args.args.drain(..).next().unwrap().1;

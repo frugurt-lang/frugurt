@@ -1,25 +1,17 @@
 use std::{any::Any, fmt::Debug, rc::Rc};
 
-use uid::Id;
-
-use crate::{
-    error::FruError,
-    identifier::Identifier,
-    stdlib::prelude::builtin_function_type::BuiltinFunctionType,
-    value::{
-        fru_value::FruValue,
-        function_helpers::EvaluatedArgumentList,
-        native_object::{INativeObject, OfObject},
-    },
+use crate::common::{
+    EvaluatedArgumentList, FruError, FruValue, INativeObject, IdOfObject, Identifier,
 };
+use crate::value::fru_value::type_id;
 
-pub type SimpleMethodOfFn<T> = fn(&Rc<T>, EvaluatedArgumentList) -> Result<FruValue, FruError>;
+type SimpleMethodOfFn<T> = fn(&Rc<T>, EvaluatedArgumentList) -> Result<FruValue, FruError>;
 
 pub struct SimpleMethodOf<T: INativeObject> {
     ident: Identifier,
     owner: Rc<T>,
     fun: SimpleMethodOfFn<T>,
-    uid: Id<OfObject>,
+    uid: IdOfObject,
 }
 
 impl<T: INativeObject> SimpleMethodOf<T> {
@@ -28,7 +20,7 @@ impl<T: INativeObject> SimpleMethodOf<T> {
             ident,
             owner,
             fun,
-            uid: Id::new(),
+            uid: IdOfObject::new(),
         }
     }
 }
@@ -38,25 +30,21 @@ impl<T: INativeObject + 'static> INativeObject for SimpleMethodOf<T> {
         self
     }
 
-    fn get_uid(&self) -> Id<OfObject> {
+    fn get_uid(&self) -> IdOfObject {
         self.uid
     }
 
-    fn get_type(&self) -> FruValue {
-        BuiltinFunctionType::get_singleton()
+    fn get_type_uid(&self) -> IdOfObject {
+        *type_id::FUNCTION_TYPE_ID
     }
 
     fn call(self: Rc<Self>, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         (self.fun)(&self.owner, _args)
     }
-
-    fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject> {
-        self
-    }
 }
 
 impl<T: INativeObject> Debug for SimpleMethodOf<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{:?}.{}", self.owner.get_type(), self.ident)
+        write!(f, "{:?}.{}", self.owner, self.ident)
     }
 }

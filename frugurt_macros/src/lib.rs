@@ -30,8 +30,6 @@ pub fn static_ident(input: TokenStream) -> TokenStream {
 pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
     let mut item = parse_macro_input!(item as ItemImpl);
 
-    let mut get_set_op_flag = false;
-
     for i in attrs {
         if let TokenTree::Ident(ident) = i {
             match ident.to_string().as_str() {
@@ -42,49 +40,14 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
                 }),
 
                 "get_uid" => item.items.push(syn::parse_quote! {
-                    fn get_uid(&self) -> uid::Id<crate::common::OfObject> {
+                    fn get_uid(&self) -> crate::common::IdOfObject {
+                        self.uid
+                    }
+                }),
+
+                "get_type_uid" => item.items.push(syn::parse_quote! {
+                    fn get_type_uid(&self) -> crate::common::IdOfObject {
                         crate::static_uid!()
-                    }
-                }),
-
-                "get_type" => item.items.push(syn::parse_quote! {
-                    fn get_type(&self) -> FruValue {
-                        crate::stdlib::common::BuiltinTypeType::get_singleton()
-                    }
-                }),
-
-                "get_set_op" => {
-                    get_set_op_flag = true;
-                    item.items.push(syn::parse_quote! {
-                        fn get_operator(
-                            self: std::rc::Rc<Self>,
-                            ident: crate::common::OperatorIdentifier,
-                        ) -> Option<crate::common::AnyOperator> {
-                            OPERATORS.lock().unwrap().get(&ident).cloned()
-                        }
-                    });
-                    item.items.push(syn::parse_quote! {
-                        fn set_operator(
-                            self: std::rc::Rc<Self>,
-                            ident: crate::common::OperatorIdentifier,
-                            value: crate::common::AnyOperator,
-                        ) -> Result<(), crate::common::FruError> {
-                            match OPERATORS.lock().unwrap().entry(ident) {
-                                std::collections::hash_map::Entry::Occupied(_) => {
-                                    crate::common::FruError::new_res(format!("operator `{:?}` is already set", ident.op))
-                                }
-                                std::collections::hash_map::Entry::Vacant(entry) => {
-                                    entry.insert(value);
-                                    Ok(())
-                                }
-                            }
-                        }
-                    });
-                }
-
-                "fru_clone" => item.items.push(syn::parse_quote! {
-                    fn fru_clone(self: std::rc::Rc<Self>) -> std::rc::Rc<dyn INativeObject> {
-                        self
                     }
                 }),
 
@@ -97,33 +60,17 @@ pub fn derive_nat(attrs: TokenStream, item: TokenStream) -> TokenStream {
         ImplItem::Fn(s) => match s.sig.ident.to_string().as_str() {
             "as_any" => 1,
             "get_uid" => 2,
-            "get_type" => 3,
+            "get_type_uid" => 3,
             "call" => 4,
             "index" => 5,
             "get_prop" => 6,
             "set_prop" => 7,
-            "get_operator" => 8,
-            "set_operator" => 9,
-            "fru_clone" => 10,
+            "let_prop" => 8,
+
             u => unreachable!("{}", u),
         },
         u => unreachable!("{}", u.to_token_stream().to_string()),
     });
 
-    let mut item = item.to_token_stream();
-
-    if get_set_op_flag {
-        item.extend(quote! {
-            static OPERATORS: once_cell::sync::Lazy<
-                std::sync::Mutex<
-                    std::collections::HashMap<
-                        crate::common::OperatorIdentifier,
-                        crate::common::AnyOperator,
-                    >,
-                >,
-            > = once_cell::sync::Lazy::new(Default::default);
-        });
-    }
-
-    item.into()
+    item.to_token_stream().into()
 }

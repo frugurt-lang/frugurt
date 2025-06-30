@@ -1,18 +1,11 @@
-use std::{
-    boxed::Box,
-    collections::{hash_map::Entry, HashMap},
-    rc::Rc,
-    str::Utf8Error,
-};
+use std::{boxed::Box, str::Utf8Error};
 
 use snailquote::unescape;
 use thiserror::Error;
 use tree_sitter::{Node, Parser, Range};
 
-use frugurt_macros::static_ident;
-
 use crate::common::*;
-use crate::stdlib::common::BuiltinStringInstance;
+use crate::stdlib::common::BuiltinString;
 
 #[derive(Error, Debug)]
 pub enum ParseError {
@@ -72,13 +65,6 @@ pub enum ParseError {
         position: Range,
         error: String,
     },
-}
-
-enum TypeMember {
-    NormalField(FruField),
-    StaticField(RawStaticField),
-    Property(Property),
-    StaticProperty(Property),
 }
 
 #[derive(Clone, Copy)]
@@ -218,7 +204,7 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             body: ast.parse_children("body", parse_statement)?,
         },
 
-        "scope_modifier_statement" => FruStatement::ScopeModifier {
+        "object_alter_statement" => FruStatement::ObjectAlter {
             what: ast.parse_child_expression("what")?.wrap_box(),
             body: ast.parse_children("body", parse_statement)?,
         },
@@ -228,17 +214,6 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
         },
 
         "let_statement" => FruStatement::Let {
-            ident: ast.get_child_ident("ident")?,
-            value: ast.parse_child_expression("value")?.wrap_box(),
-        },
-
-        "set_statement" => FruStatement::Set {
-            ident: ast.get_child_ident("ident")?,
-            value: ast.parse_child_expression("value")?.wrap_box(),
-        },
-
-        "set_prop_statement" => FruStatement::SetProp {
-            what: ast.parse_child_expression("what")?.wrap_box(),
             ident: ast.get_child_ident("ident")?,
             value: ast.parse_child_expression("value")?.wrap_box(),
         },
@@ -289,80 +264,10 @@ fn parse_statement(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
             }
         }
 
-        "type_statement" => {
-            let type_flavor = match ast.get_child_text("type_flavor")? {
-                "struct" => TypeFlavor::Struct,
-                "class" => TypeFlavor::Class,
-                "data" => TypeFlavor::Data,
-                _ => {
-                    return Err(ParseError::InvalidAst {
-                        position: ast.get_child("type_flavor")?.range(),
-                        error: format!(
-                            "Invalid type flavor: {}",
-                            ast.get_child_text("type_flavor")?
-                        ),
-                    });
-                }
-            };
-
-            let ident = ast.get_child_ident("ident")?;
-
-            let mut fields = Vec::new();
-            let mut static_fields = Vec::new();
-            let mut properties = HashMap::new();
-            let mut static_properties = HashMap::new();
-
-            for member in ast.parse_children("members", parse_type_member)? {
-                match member {
-                    TypeMember::NormalField(f) => fields.push(f),
-
-                    TypeMember::StaticField(f) => static_fields.push(f),
-
-                    TypeMember::Property(p) => match properties.entry(p.ident) {
-                        Entry::Occupied(_) => {
-                            return Err(ParseError::Error {
-                                position: ast.get_child("members")?.range(),
-                                error: format!("Duplicate property: `{}`", p.ident),
-                            });
-                        }
-
-                        Entry::Vacant(entry) => {
-                            entry.insert(p);
-                        }
-                    },
-
-                    TypeMember::StaticProperty(p) => match static_properties.entry(p.ident) {
-                        Entry::Occupied(_) => {
-                            return Err(ParseError::Error {
-                                position: ast.get_child("members")?.range(),
-                                error: format!("Duplicate static property: `{}`", p.ident),
-                            });
-                        }
-
-                        Entry::Vacant(entry) => {
-                            entry.insert(p);
-                        }
-                    },
-                }
-            }
-
-            let methods = ast.parse_optional_child("impl", parse_impl)?.unwrap_or_else(Vec::new);
-
-            FruStatement::Type {
-                type_flavor,
-                ident,
-                fields,
-                static_fields,
-                properties,
-                static_properties,
-                methods,
-            }
-        }
-
         unexpected => {
             return Err(ParseError::InvalidAst {
                 position: ast.range(),
-                error: format!("Not a statement: {}", unexpected),
+                error: format!("not a statement: {}", unexpected),
             });
         }
     };
@@ -386,7 +291,7 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
 
         "string_literal" => match unescape(&ast.text()?.replace("\\\n", "\n")) {
             Ok(s) => FruExpression::Literal {
-                value: NativeObject::new_value(BuiltinStringInstance::new(s)),
+                value: NativeObject::new_value(BuiltinString::new(s)),
             },
 
             Err(err) => {
@@ -401,7 +306,7 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
             ident: ast.get_child_ident("ident")?,
         },
 
-        "scope_expression" => FruExpression::ScopeAccessor,
+        "object_capture_expression" => FruExpression::ObjectCapture,
 
         "function_expression" => FruExpression::Function {
             args: ast.parse_child("parameters", parse_formal_parameters)?,
@@ -415,7 +320,7 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
             expr: ast.parse_child_expression("expr")?.wrap_box(),
         },
 
-        "scope_modifier_expression" => FruExpression::ScopeModifier {
+        "object_alter_expression" => FruExpression::ObjectAlter {
             what: ast.parse_child_expression("what")?.wrap_box(),
             body: ast.parse_children("body", parse_statement)?,
             expr: ast.parse_child_expression("expr")?.wrap_box(),
@@ -431,21 +336,38 @@ fn parse_expression(ast: NodeWrapper) -> Result<FruExpression, ParseError> {
             args: ast.parse_child("args", parse_argument_list_index)?,
         },
 
-        "prop_access_expression" => FruExpression::PropAccess {
+        "get_prop_expression" => FruExpression::GetProp {
             what: ast.parse_child_expression("what")?.wrap_box(),
             ident: ast.get_child_ident("ident")?,
-        },
-
-        "binary_expression" => FruExpression::Binary {
-            operator: ast.get_child_ident("operator")?,
-            left: ast.parse_child_expression("left")?.wrap_box(),
-            right: ast.parse_child_expression("right")?.wrap_box(),
         },
 
         "if_expression" => FruExpression::If {
             condition: ast.parse_child_expression("condition")?.wrap_box(),
             then_body: ast.parse_child_expression("then_body")?.wrap_box(),
             else_body: ast.parse_child_expression("else_body")?.wrap_box(),
+        },
+
+        "set_prop_expression" => FruExpression::SetProp {
+            what: ast.parse_child_expression("what")?.wrap_box(),
+            ident: ast.get_child_ident("ident")?,
+            value: ast.parse_child_expression("value")?.wrap_box(),
+        },
+
+        "let_prop_expression" => FruExpression::LetProp {
+            what: ast.parse_child_expression("what")?.wrap_box(),
+            ident: ast.get_child_ident("ident")?,
+            value: ast.parse_child_expression("value")?.wrap_box(),
+        },
+
+        "set_expression" => FruExpression::Set {
+            ident: ast.get_child_ident("ident")?,
+            value: ast.parse_child_expression("value")?.wrap_box(),
+        },
+
+        "binary_expression" => FruExpression::Binary {
+            operator: ast.get_child_ident("operator")?,
+            left: ast.parse_child_expression("left")?.wrap_box(),
+            right: ast.parse_child_expression("right")?.wrap_box(),
         },
 
         unexpected => {
@@ -484,132 +406,6 @@ fn parse_function_body(ast: NodeWrapper) -> Result<FruStatement, ParseError> {
                 error: format!("Not a function body: {}", unexpected),
             });
         }
-    })
-}
-
-fn parse_type_member(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
-    match ast.grammar_name() {
-        "type_field" => parse_field(ast),
-
-        "type_property" => parse_property(ast),
-
-        unexpected => Err(ParseError::InvalidAst {
-            position: ast.range(),
-            error: format!("Not a type member: {}", unexpected),
-        }),
-    }
-}
-
-fn parse_field(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
-    let is_public = ast.get_child("pub").is_ok();
-    let is_static = ast.get_child("static").is_ok();
-    let (ident, type_ident) = ast.parse_child("ident", parse_maybe_typed_ident)?;
-
-    let value = ast.parse_optional_child("value", parse_expression)?;
-
-    if !is_static && value.is_some() {
-        return Err(ParseError::Error {
-            position: ast.get_child("value")?.range(),
-            error: "Non-static field cannot have an initial value".to_string(),
-        });
-    }
-
-    Ok(if is_static {
-        TypeMember::StaticField(RawStaticField {
-            ident,
-            value: value.map(Box::new),
-        })
-    } else {
-        TypeMember::NormalField(FruField {
-            is_public,
-            ident,
-            type_ident,
-        })
-    })
-}
-
-fn parse_property(ast: NodeWrapper) -> Result<TypeMember, ParseError> {
-    enum Item<'a> {
-        Get(Rc<FruExpression>, NodeWrapper<'a>),
-        Set((Identifier, Rc<FruStatement>), NodeWrapper<'a>),
-    }
-
-    // TODO: add public modifier
-    let ident = ast.get_child_ident("ident")?;
-
-    let is_static = ast.get_child("static").is_ok();
-
-    let items = ast.parse_children("items", |x| {
-        Ok(match x.get_child_text("type")? {
-            "get" => Item::Get(x.parse_child_expression("body")?.wrap_rc(), x),
-
-            "set" => {
-                let ident = x.parse_optional_child("value_ident", parse_maybe_typed_ident)?;
-
-                Item::Set(
-                    (
-                        ident.map_or_else(|| static_ident!("value"), |x| x.0),
-                        x.parse_child_statement("body")?.wrap_rc(),
-                    ),
-                    x,
-                )
-            }
-
-            unexpected => {
-                return Err(ParseError::InvalidAst {
-                    position: x.range(),
-                    error: format!("Not a property item: {}", unexpected),
-                });
-            }
-        })
-    })?;
-
-    let mut ret = Property {
-        ident,
-        getter: None,
-        setter: None,
-    };
-
-    for item in items {
-        match item {
-            Item::Get(x, node) => {
-                if ret.getter.is_some() {
-                    return Err(ParseError::Error {
-                        position: node.range(),
-                        error: "Property can only have one getter".to_string(),
-                    });
-                }
-                ret.getter = Some(x)
-            }
-            Item::Set(x, node) => {
-                if ret.setter.is_some() {
-                    return Err(ParseError::Error {
-                        position: node.range(),
-                        error: "Property can only have one setter".to_string(),
-                    });
-                }
-                ret.setter = Some(x)
-            }
-        }
-    }
-
-    Ok(if is_static {
-        TypeMember::StaticProperty(ret)
-    } else {
-        TypeMember::Property(ret)
-    })
-}
-
-fn parse_impl(ast: NodeWrapper) -> Result<Vec<RawMethod>, ParseError> {
-    ast.parse_children("methods", parse_method)
-}
-
-fn parse_method(ast: NodeWrapper) -> Result<RawMethod, ParseError> {
-    Ok(RawMethod {
-        is_static: ast.get_child("static").is_ok(),
-        ident: ast.get_child_ident("ident")?,
-        parameters: ast.parse_child("parameters", parse_formal_parameters)?,
-        body: ast.parse_child("body", parse_function_body)?.wrap_rc(),
     })
 }
 

@@ -1,48 +1,35 @@
 use std::{any::Any, fmt::Debug, rc::Rc};
 
-use uid::Id;
-
-use crate::common::*;
-
-#[derive(Copy, Clone, Eq, PartialEq, Hash)]
-pub struct OfObject;
+use crate::common::{
+    fru_err_res, EvaluatedArgumentList, FruError, FruValue, IdOfObject, Identifier,
+};
 
 pub trait INativeObject: Debug {
     fn as_any(self: Rc<Self>) -> Rc<dyn Any>;
 
-    fn get_uid(&self) -> Id<OfObject>;
+    fn get_uid(&self) -> IdOfObject;
 
-    fn get_type(&self) -> FruValue;
+    fn get_type_uid(&self) -> IdOfObject;
 
     fn call(self: Rc<Self>, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        fru_err_res!("`{:?}` is not invokable ", self.get_type())
+        fru_err_res!("cannot call `{:?}`", self)
     }
 
     fn index(self: Rc<Self>, _args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
-        fru_err_res!("`{:?}` is not indexable", self.get_type())
+        fru_err_res!("cannot index `{:?}`", self)
     }
 
     fn get_prop(self: Rc<Self>, _ident: Identifier) -> Result<FruValue, FruError> {
-        fru_err_res!("cannot access prop of `{:?}`", self.get_type())
+        fru_err_res!("cannot get prop of `{:?}`", self)
     }
 
     fn set_prop(self: Rc<Self>, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
-        fru_err_res!("cannot set prop of `{:?}`", self.get_type())
+        fru_err_res!("cannot set prop of `{:?}`", self)
     }
 
-    fn get_operator(self: Rc<Self>, _ident: OperatorIdentifier) -> Option<AnyOperator> {
-        unimplemented!();
+    fn let_prop(self: Rc<Self>, _ident: Identifier, _value: FruValue) -> Result<(), FruError> {
+        fru_err_res!("cannot let prop of `{:?}`", self)
     }
-
-    fn set_operator(
-        self: Rc<Self>,
-        _ident: OperatorIdentifier,
-        _value: AnyOperator,
-    ) -> Result<(), FruError> {
-        unimplemented!();
-    }
-
-    fn fru_clone(self: Rc<Self>) -> Rc<dyn INativeObject>;
 }
 
 #[derive(Clone)]
@@ -61,12 +48,12 @@ impl NativeObject {
         FruValue::Native(Self { internal: o })
     }
 
-    pub fn get_type(&self) -> FruValue {
-        self.internal.get_type()
+    pub fn get_uid(&self) -> IdOfObject {
+        self.internal.get_uid()
     }
 
-    pub fn get_uid(&self) -> Id<OfObject> {
-        self.internal.get_uid()
+    pub fn get_type_uid(&self) -> IdOfObject {
+        self.internal.get_type_uid()
     }
 
     pub fn call(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
@@ -83,24 +70,6 @@ impl NativeObject {
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         self.internal.clone().set_prop(ident, value)
-    }
-
-    pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
-        self.internal.clone().get_operator(ident)
-    }
-
-    pub fn set_operator(
-        &self,
-        ident: OperatorIdentifier,
-        value: AnyOperator,
-    ) -> Result<(), FruError> {
-        self.internal.clone().set_operator(ident, value)
-    }
-
-    pub fn fru_clone(&self) -> FruValue {
-        FruValue::Native(NativeObject {
-            internal: self.internal.clone().fru_clone(),
-        })
     }
 }
 

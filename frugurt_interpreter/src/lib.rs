@@ -9,6 +9,7 @@ mod expression;
 mod helpers;
 mod identifier;
 pub mod interpreter;
-mod scope;
+// mod scope;
 mod statement;
+mod thing;
 mod tree_sitter_parser;

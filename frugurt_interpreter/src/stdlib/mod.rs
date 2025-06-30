@@ -5,7 +5,7 @@ pub mod prelude;
 #[macro_export]
 macro_rules! static_uid {
     () => {{
-        static ID: once_cell::sync::Lazy<uid::Id<$crate::common::OfObject>> =
+        static ID: once_cell::sync::Lazy<$crate::common::IdOfObject> =
             once_cell::sync::Lazy::new(uid::Id::new);
         *ID
     }};

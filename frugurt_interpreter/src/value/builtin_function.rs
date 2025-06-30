@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
-use crate::common::*;
+use crate::common::{EvaluatedArgumentList, FruError, FruValue};
+
+pub type TFnBuiltin = fn(EvaluatedArgumentList) -> Result<FruValue, FruError>;
 
 #[derive(Clone)]
 pub struct BuiltinFunction {

@@ -1,8 +1,12 @@
 use std::rc::Rc;
 
-use crate::common::*;
-
-use crate::stdlib::common::BuiltinScopeInstance;
+use crate::{
+    common::{
+        ArgumentList, Control, EvaluatedArgumentList, FormalParameters, FruError, FruFunction,
+        FruStatement, FruValue, Identifier, OperatorIdentifier, Thing,
+    },
+    fru_err,
+};
 
 #[derive(Debug, Clone)]
 pub enum FruExpression {
@@ -12,7 +16,7 @@ pub enum FruExpression {
     Variable {
         ident: Identifier,
     },
-    ScopeAccessor,
+    ObjectCapture,
     Function {
         args: FormalParameters,
         body: Rc<FruStatement>,
@@ -21,7 +25,7 @@ pub enum FruExpression {
         body: Vec<FruStatement>,
         expr: Box<FruExpression>,
     },
-    ScopeModifier {
+    ObjectAlter {
         what: Box<FruExpression>,
         body: Vec<FruStatement>,
         expr: Box<FruExpression>,
@@ -34,23 +38,37 @@ pub enum FruExpression {
         what: Box<FruExpression>,
         args: ArgumentList,
     },
-    PropAccess {
+    GetProp {
         what: Box<FruExpression>,
         ident: Identifier,
-    },
-    Binary {
-        operator: Identifier,
-        left: Box<FruExpression>,
-        right: Box<FruExpression>,
     },
     If {
         condition: Box<FruExpression>,
         then_body: Box<FruExpression>,
         else_body: Box<FruExpression>,
     },
+    Set {
+        ident: Identifier,
+        value: Box<FruExpression>,
+    },
+    SetProp {
+        what: Box<FruExpression>,
+        ident: Identifier,
+        value: Box<FruExpression>,
+    },
+    LetProp {
+        what: Box<FruExpression>,
+        ident: Identifier,
+        value: Box<FruExpression>,
+    },
+    Binary {
+        operator: Identifier,
+        left: Box<FruExpression>,
+        right: Box<FruExpression>,
+    },
 }
 
-fn eval_args(args: &ArgumentList, scope: Rc<Scope>) -> Result<EvaluatedArgumentList, Control> {
+fn eval_args(args: &ArgumentList, scope: Thing) -> Result<EvaluatedArgumentList, Control> {
     Ok(EvaluatedArgumentList {
         args: args
             .args
@@ -63,13 +81,13 @@ fn eval_args(args: &ArgumentList, scope: Rc<Scope>) -> Result<EvaluatedArgumentL
 }
 
 impl FruExpression {
-    pub fn evaluate(&self, mut scope: Rc<Scope>) -> Result<FruValue, Control> {
+    pub fn evaluate(&self, scope: Thing) -> Result<FruValue, Control> {
         match self {
             FruExpression::Literal { value } => Ok(value.clone()),
 
-            FruExpression::Variable { ident } => Ok(scope.get_variable(*ident)?),
+            FruExpression::Variable { ident } => Ok(scope.get_prop(*ident)?),
 
-            FruExpression::ScopeAccessor => Ok(BuiltinScopeInstance::new_value(scope)),
+            FruExpression::ObjectCapture => Ok(FruValue::Thing(scope)),
 
             FruExpression::Function { args, body } => {
                 Ok(FruValue::Function(Rc::new(FruFunction {
@@ -80,24 +98,23 @@ impl FruExpression {
             }
 
             FruExpression::Block { body, expr } => {
-                scope = Scope::new_with_parent(scope.clone());
+                let new_scope = scope.derive_new();
 
                 for statement in body {
-                    statement.execute(scope.clone())?;
+                    statement.execute(new_scope.clone())?;
                 }
 
-                expr.evaluate(scope)
+                expr.evaluate(new_scope)
             }
 
-            FruExpression::ScopeModifier { what, body, expr } => {
-                let what = what.evaluate(scope)?;
+            FruExpression::ObjectAlter { what, body, expr } => {
+                let new_scope = match what.evaluate(scope)? {
+                    FruValue::Thing(new_scope) => new_scope,
 
-                let new_scope = match cast_object::<BuiltinScopeInstance>(&what) {
-                    Some(new_scope) => new_scope.scope.clone(),
-                    None => {
+                    unexpected => {
                         return Control::new_err(format!(
-                            "Expected `Scope` in scope modifier expression, got `{:?}`",
-                            what.get_type()
+                            "Only `Thing` can be altered, not {:?}",
+                            unexpected
                         ));
                     }
                 };
@@ -110,47 +127,40 @@ impl FruExpression {
             }
 
             FruExpression::Call { what, args } => {
-                let callee = what.evaluate(scope.clone())?;
-
+                let obj = what.evaluate(scope.clone())?;
                 let args = eval_args(args, scope)?;
-
-                Ok(callee.call(args)?)
+                Ok(obj.call(args)?)
             }
 
             FruExpression::Index { what, args } => {
                 let obj = what.evaluate(scope.clone())?;
-
                 let args = eval_args(args, scope)?;
-
                 Ok(obj.index(args)?)
             }
 
-            FruExpression::PropAccess { what, ident } => {
+            FruExpression::GetProp { what, ident } => {
                 let what = what.evaluate(scope.clone())?;
-
                 Ok(what.get_prop(*ident)?)
             }
 
-            FruExpression::Binary {
-                operator,
-                left,
-                right,
-            } => {
-                let left_val = left.evaluate(scope.clone())?;
-                let right_val = right.evaluate(scope.clone())?;
-                let type_left = left_val.get_type();
-                let type_right = right_val.get_type();
+            FruExpression::SetProp { what, ident, value } => {
+                let obj = what.evaluate(scope.clone())?;
+                let val = value.evaluate(scope.clone())?;
+                obj.set_prop(*ident, val.clone())?;
+                Ok(val)
+            }
 
-                let op = type_left
-                    .get_operator(OperatorIdentifier::new(*operator, type_right.get_uid()))
-                    .ok_or_else(|| {
-                        FruError::new(format!(
-                            "operator `{:?}` between `{:?}` and `{:?}` does not exist",
-                            operator, type_left, type_right
-                        ))
-                    })?;
+            FruExpression::LetProp { what, ident, value } => {
+                let t = what.evaluate(scope.clone())?;
+                let v = value.evaluate(scope.clone())?;
+                t.set_prop(*ident, v.clone())?;
+                Ok(v)
+            }
 
-                op.operate(left_val, right_val).map_err(Into::into)
+            FruExpression::Set { ident, value } => {
+                let val = value.evaluate(scope.clone())?;
+                scope.set_prop(*ident, val.clone())?;
+                Ok(val)
             }
 
             FruExpression::If {
@@ -168,9 +178,31 @@ impl FruExpression {
 
                 unexpected => Control::new_err(format!(
                     "Expected `Bool` in if condition, got `{:?}`",
-                    unexpected.get_type()
+                    unexpected
                 )),
             },
+
+            FruExpression::Binary {
+                operator,
+                left,
+                right,
+            } => {
+                let val_left = left.evaluate(scope.clone())?;
+                let val_right = right.evaluate(scope.clone())?;
+                let type_left = val_left.get_type_uid();
+                let type_right = val_right.get_type_uid();
+
+                let op = type_left.get_operator(OperatorIdentifier::new()).ok_or_else(|| {
+                    fru_err!(
+                        "operator `{:?}` between `{:?}` and `{:?}` does not exist",
+                        operator,
+                        type_left,
+                        type_right
+                    )
+                })?;
+
+                op.operate(val_left, val_right).map_err(Into::into)
+            }
         }
     }
 }

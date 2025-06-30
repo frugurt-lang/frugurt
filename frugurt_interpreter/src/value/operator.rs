@@ -1,49 +1,51 @@
 use std::{fmt::Debug, rc::Rc};
 
-use crate::common::*;
+use crate::common::{returned_unit, FruError, FruStatement, FruValue, Identifier, Thing};
+
+pub type TOpBuiltin = fn(FruValue, FruValue) -> Result<FruValue, FruError>;
 
 #[derive(Clone)]
-pub enum AnyOperator {
+pub enum Operator {
     Operator {
         left_ident: Identifier,
         right_ident: Identifier,
         body: Rc<FruStatement>,
-        scope: Rc<Scope>,
+        scope: Thing,
     },
-    BuiltinOperator(TOpBuiltin),
+    Builtin(TOpBuiltin),
 }
 
-impl AnyOperator {
+impl Operator {
     pub fn operate(&self, left_val: FruValue, right_val: FruValue) -> Result<FruValue, FruError> {
         match self {
-            AnyOperator::Operator {
+            Operator::Operator {
                 left_ident,
                 right_ident,
                 body,
                 scope,
             } => {
-                let new_scope = Scope::new_with_parent(scope.clone());
+                let new_scope = scope.derive_new();
 
-                new_scope.let_variable(*left_ident, left_val)?;
-                new_scope.let_variable(*right_ident, right_val)?;
+                new_scope.let_prop(*left_ident, left_val)?;
+                new_scope.let_prop(*right_ident, right_val)?;
 
                 returned_unit(body.execute(new_scope))
             }
 
-            AnyOperator::BuiltinOperator(op) => op(left_val, right_val),
+            Operator::Builtin(op) => op(left_val, right_val),
         }
     }
 }
 
-impl Debug for AnyOperator {
+impl Debug for Operator {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            AnyOperator::BuiltinOperator(_) => write!(f, "BuiltinOperator"),
+            Operator::Builtin(_) => write!(f, "BuiltinOperator"),
             v => v.fmt(f),
         }
     }
 }
 
-unsafe impl Send for AnyOperator {}
-
-unsafe impl Sync for AnyOperator {}
+// unsafe impl Send for AnyOperator {}
+//
+// unsafe impl Sync for AnyOperator {}

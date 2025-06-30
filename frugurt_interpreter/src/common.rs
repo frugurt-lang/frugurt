@@ -1,23 +1,25 @@
 pub use crate::{
-    ast_helpers::{RawMethod, RawStaticField},
-    control::{returned, returned_nothing, returned_unit, Control},
+    control::{returned, returned_unit, Control},
     error::FruError,
     expression::FruExpression,
     fru_err_res,
     helpers::WrappingExtension,
     identifier::{Identifier, OperatorIdentifier},
-    scope::Scope,
     statement::FruStatement,
     static_native_value,
+    thing::Thing,
     value::{
         builtin_function::BuiltinFunction,
         fru_function::FruFunction,
-        fru_object::FruObject,
-        fru_type::{FruField, FruType, Property, TypeFlavor},
-        fru_value::{FruValue, TFnBuiltin, TOpBuiltin},
+        fru_value::FruValue,
         function_helpers::{ArgumentList, EvaluatedArgumentList, FormalParameters},
-        native_object::{cast_object, INativeObject, NativeObject, OfObject},
-        operator::AnyOperator,
+        native_object::{cast_object, INativeObject, NativeObject},
+        operator::Operator,
     },
 };
-pub use frugurt_macros::derive_nat;
+
+pub use frugurt_macros::{derive_nat, static_ident};
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash)]
+struct OfObject;
+pub type IdOfObject = uid::Id<OfObject>;

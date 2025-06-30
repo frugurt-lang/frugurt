@@ -1,7 +1,8 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::rc::Rc;
 
-use crate::common::*;
-use crate::stdlib::common::BuiltinScopeInstance;
+use crate::common::{
+    Control, FruExpression, FruValue, Identifier, Operator, OperatorIdentifier, Thing,
+};
 
 #[derive(Debug, Clone)]
 pub enum FruStatement {
@@ -11,7 +12,7 @@ pub enum FruStatement {
     Block {
         body: Vec<FruStatement>,
     },
-    ScopeModifier {
+    ObjectAlter {
         what: Box<FruExpression>,
         body: Vec<FruStatement>,
     },
@@ -19,15 +20,6 @@ pub enum FruStatement {
         value: Box<FruExpression>,
     },
     Let {
-        ident: Identifier,
-        value: Box<FruExpression>,
-    },
-    Set {
-        ident: Identifier,
-        value: Box<FruExpression>,
-    },
-    SetProp {
-        what: Box<FruExpression>,
         ident: Identifier,
         value: Box<FruExpression>,
     },
@@ -54,19 +46,10 @@ pub enum FruStatement {
         right_type_ident: Identifier,
         body: Rc<FruStatement>,
     },
-    Type {
-        type_flavor: TypeFlavor,
-        ident: Identifier,
-        fields: Vec<FruField>,
-        static_fields: Vec<RawStaticField>,
-        properties: HashMap<Identifier, Property>,
-        static_properties: HashMap<Identifier, Property>,
-        methods: Vec<RawMethod>,
-    },
 }
 
 impl FruStatement {
-    pub fn execute(&self, scope: Rc<Scope>) -> Result<(), Control> {
+    pub fn execute(&self, scope: Thing) -> Result<(), Control> {
         match self {
             FruStatement::SourceCode { body } => {
                 for statement in body {
@@ -75,23 +58,19 @@ impl FruStatement {
             }
 
             FruStatement::Block { body } => {
-                let new_scope = Scope::new_with_parent(scope.clone());
+                let new_scope = scope.derive_new();
 
                 for statement in body {
                     statement.execute(new_scope.clone())?;
                 }
             }
 
-            FruStatement::ScopeModifier { what, body } => {
-                let what = what.evaluate(scope)?;
+            FruStatement::ObjectAlter { what, body } => {
+                let new_scope = match what.evaluate(scope)? {
+                    FruValue::Thing(new_scope) => new_scope,
 
-                let new_scope = match cast_object::<BuiltinScopeInstance>(&what) {
-                    Some(new_scope) => new_scope.scope.clone(),
-                    None => {
-                        return Control::new_err(format!(
-                            "Expected `Scope` in scope modifier statement, got `{:?}`",
-                            what.get_type()
-                        ));
+                    unexpected => {
+                        return Control::new_err(format!("cannot alter `{:?}`", unexpected));
                     }
                 };
 
@@ -107,54 +86,38 @@ impl FruStatement {
             FruStatement::Let { ident, value } => {
                 let v = value.evaluate(scope.clone())?;
 
-                scope.let_variable(*ident, v.fru_clone())?;
-            }
-
-            FruStatement::Set { ident, value } => {
-                let v = value.evaluate(scope.clone())?;
-
-                scope.set_variable(*ident, v.fru_clone())?;
-            }
-
-            FruStatement::SetProp { what, ident, value } => {
-                let t = what.evaluate(scope.clone())?;
-                let v = value.evaluate(scope.clone())?;
-                t.set_prop(*ident, v.fru_clone())?;
+                scope.let_prop(*ident, v)?;
             }
 
             FruStatement::If {
                 condition,
                 then_body,
                 else_body,
-            } => {
-                let result = condition.evaluate(scope.clone())?;
+            } => match condition.evaluate(scope.clone())? {
+                FruValue::Bool(true) => then_body.execute(scope.clone())?,
 
-                match result {
-                    FruValue::Bool(true) => then_body.execute(scope.clone())?,
-
-                    FruValue::Bool(false) => {
-                        if let Some(else_body) = else_body {
-                            else_body.execute(scope.clone())?
-                        }
-                    }
-
-                    _ => {
-                        return Control::new_err(format!(
-                            "Expected `Bool` in if condition, got `{:?}`",
-                            result.get_type()
-                        ));
+                FruValue::Bool(false) => {
+                    if let Some(else_body) = else_body {
+                        else_body.execute(scope.clone())?
                     }
                 }
-            }
+
+                unexpected => {
+                    return Control::new_err(format!(
+                        "expected bool in condition, got `{:?}`",
+                        unexpected
+                    ));
+                }
+            },
 
             FruStatement::While { condition, body } => {
                 while {
                     match condition.evaluate(scope.clone())? {
                         FruValue::Bool(b) => b,
-                        other => {
+                        unexpected => {
                             return Control::new_err(format!(
-                                "Expected `Bool` in while condition, got `{:?}`",
-                                other.get_type()
+                                "expected `Bool` in condition, got `{:?}`",
+                                unexpected
                             ));
                         }
                     }
@@ -189,12 +152,12 @@ impl FruStatement {
                 right_type_ident,
                 body,
             } => {
-                let left_type = scope.get_variable(*left_type_ident)?;
-                let right_type = scope.get_variable(*right_type_ident)?;
+                let left_type = scope.get_prop(*left_type_ident)?;
+                let right_type = scope.get_prop(*right_type_ident)?;
 
                 left_type.set_operator(
                     OperatorIdentifier::new(*ident, right_type.get_uid()),
-                    AnyOperator::Operator {
+                    Operator::Operator {
                         left_ident: *left_ident,
                         right_ident: *right_ident,
                         body: body.clone(),
@@ -205,7 +168,7 @@ impl FruStatement {
                 if *commutative {
                     right_type.set_operator(
                         OperatorIdentifier::new(*ident, left_type.get_uid()),
-                        AnyOperator::Operator {
+                        Operator::Operator {
                             left_ident: *right_ident,
                             right_ident: *left_ident,
                             body: body.clone(),
@@ -213,58 +176,6 @@ impl FruStatement {
                         },
                     )?;
                 }
-            }
-
-            FruStatement::Type {
-                type_flavor,
-                ident,
-                fields,
-                static_fields,
-                properties,
-                static_properties,
-                methods,
-            } => {
-                let mut methods_ = HashMap::new();
-                let mut static_methods_ = HashMap::new();
-
-                for method in methods {
-                    let function = FruFunction {
-                        parameters: method.parameters.clone(),
-                        body: method.body.clone(),
-                        scope: scope.clone(),
-                    };
-                    if method.is_static {
-                        static_methods_.insert(method.ident, function);
-                    } else {
-                        methods_.insert(method.ident, function);
-                    }
-                }
-
-                let mut static_fields_evaluated = HashMap::new();
-                for static_field in static_fields {
-                    let value = if let Some(v) = &static_field.value {
-                        v.evaluate(scope.clone())?
-                    } else {
-                        FruValue::Nah
-                    };
-
-                    static_fields_evaluated.insert(static_field.ident, value);
-                }
-
-                scope.let_variable(
-                    *ident,
-                    FruType::new_value(
-                        *ident,
-                        *type_flavor,
-                        fields.clone(),
-                        RefCell::new(static_fields_evaluated),
-                        properties.clone(),
-                        static_properties.clone(),
-                        methods_,
-                        static_methods_,
-                        scope.clone(),
-                    ),
-                )?;
             }
         }
 

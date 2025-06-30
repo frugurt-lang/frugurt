@@ -1,14 +1,8 @@
+use crate::common::{
+    fru_err_res, static_ident, BuiltinFunction, EvaluatedArgumentList, FruError, FruFunction,
+    IdOfObject, Identifier, NativeObject, OperatorIdentifier, Thing,
+};
 use std::{cmp::PartialEq, fmt::Debug, rc::Rc};
-
-use uid::Id;
-
-use frugurt_macros::static_ident;
-
-use crate::common::*;
-use crate::stdlib::common::*;
-
-pub type TFnBuiltin = fn(EvaluatedArgumentList) -> Result<FruValue, FruError>;
-pub type TOpBuiltin = fn(FruValue, FruValue) -> Result<FruValue, FruError>;
 
 #[derive(Clone)]
 pub enum FruValue {
@@ -22,29 +16,40 @@ pub enum FruValue {
     BuiltinFunction(BuiltinFunction),
 
     // oop
-    Type(FruType),
-    Object(FruObject),
+    Thing(Thing),
     Native(NativeObject),
+}
+pub mod type_id {
+    use crate::common::IdOfObject;
+    use lazy_static::lazy_static;
+
+    lazy_static! {
+        pub static ref NAH_TYPE_ID: IdOfObject = IdOfObject::new();
+        pub static ref BOOL_TYPE_ID: IdOfObject = IdOfObject::new();
+        pub static ref NUMBER_TYPE_ID: IdOfObject = IdOfObject::new();
+        pub static ref FUNCTION_TYPE_ID: IdOfObject = IdOfObject::new();
+        pub static ref STRING_TYPE_ID: IdOfObject = IdOfObject::new();
+    }
 }
 
 impl FruValue {
-    pub fn get_type(&self) -> FruValue {
+    pub fn get_type_uid(&self) -> IdOfObject {
         match self {
-            FruValue::Nah => BuiltinNahType::get_singleton(),
-            FruValue::Number(_) => BuiltinNumberType::get_singleton(),
-            FruValue::Bool(_) => BuiltinBoolType::get_singleton(),
-            FruValue::Function(_) => BuiltinFunctionType::get_singleton(),
-            FruValue::BuiltinFunction(_) => BuiltinFunctionType::get_singleton(),
-            FruValue::Type(_) => BuiltinTypeType::get_singleton(),
-            FruValue::Object(obj) => obj.get_type(),
-            FruValue::Native(obj) => obj.get_type(),
+            FruValue::Nah => *type_id::NAH_TYPE_ID,
+            FruValue::Number(_) => *type_id::NUMBER_TYPE_ID,
+            FruValue::Bool(_) => *type_id::BOOL_TYPE_ID,
+            FruValue::Function(_) => *type_id::FUNCTION_TYPE_ID,
+            FruValue::BuiltinFunction(_) => *type_id::FUNCTION_TYPE_ID,
+            FruValue::Thing(obj) => {
+                obj.get_prototype().map_or_else(|| obj.get_uid(), |x| x.get_uid())
+            }
+            FruValue::Native(obj) => obj.get_type_uid(),
         }
     }
 
-    pub fn get_uid(&self) -> Id<OfObject> {
+    pub fn get_uid(&self) -> IdOfObject {
         match self {
-            FruValue::Type(obj) => obj.get_uid(),
-            FruValue::Object(obj) => obj.get_uid(),
+            FruValue::Thing(obj) => obj.get_uid(),
             FruValue::Native(obj) => obj.get_uid(),
 
             _ => panic!(), // FIXME
@@ -56,75 +61,36 @@ impl FruValue {
             FruValue::Function(fun) => fun.call(args),
             FruValue::BuiltinFunction(fun) => fun.call(args),
             FruValue::Native(obj) => obj.call(args),
-            _ => fru_err_res!("`{:?}` is not invokable", self.get_type()),
+            _ => fru_err_res!("`{:?}` is not invokable", self),
         }
     }
 
     pub fn index(&self, args: EvaluatedArgumentList) -> Result<FruValue, FruError> {
         match self {
-            FruValue::Type(type_) => type_.index(args),
-
+            // FruValue::Thing(obj) => obj.index(args), // TODO: somehow
             FruValue::Native(obj) => obj.index(args),
 
-            _ => fru_err_res!("`{:?}` is not indexable", self.get_type()),
+            _ => fru_err_res!("`{:?}` is not indexable", self),
         }
     }
 
     pub fn get_prop(&self, ident: Identifier) -> Result<FruValue, FruError> {
         match self {
-            FruValue::Type(t) => t.get_prop(ident),
-
-            FruValue::Object(obj) => obj.get_prop(ident),
+            FruValue::Thing(obj) => obj.get_prop(ident),
 
             FruValue::Native(obj) => obj.get_prop(ident),
 
-            _ => fru_err_res!("cannot access prop of `{:?}`", self.get_type()),
+            _ => fru_err_res!("cannot access prop of `{:?}`", self),
         }
     }
 
     pub fn set_prop(&self, ident: Identifier, value: FruValue) -> Result<(), FruError> {
         match self {
-            FruValue::Type(t) => t.set_prop(ident, value),
-
-            FruValue::Object(obj) => obj.set_prop(ident, value),
+            FruValue::Thing(obj) => obj.set_prop(ident, value),
 
             FruValue::Native(obj) => obj.set_prop(ident, value),
 
-            _ => fru_err_res!("cannot set prop of `{:?}`", self.get_type()),
-        }
-    }
-
-    pub fn get_operator(&self, ident: OperatorIdentifier) -> Option<AnyOperator> {
-        match self {
-            FruValue::Type(t) => t.get_operator(ident),
-
-            FruValue::Native(obj) => obj.get_operator(ident),
-
-            _ => panic!(),
-        }
-    }
-
-    pub fn set_operator(
-        &self,
-        ident: OperatorIdentifier,
-        value: AnyOperator,
-    ) -> Result<(), FruError> {
-        match self {
-            FruValue::Type(t) => t.set_operator(ident, value),
-
-            FruValue::Native(obj) => obj.set_operator(ident, value),
-
-            _ => panic!(),
-        }
-    }
-
-    pub fn fru_clone(&self) -> FruValue {
-        match self {
-            FruValue::Object(obj) => obj.fru_clone(),
-
-            FruValue::Native(obj) => obj.fru_clone(),
-
-            _ => self.clone(),
+            _ => fru_err_res!("cannot set prop of `{:?}`", self),
         }
     }
 }
@@ -136,8 +102,7 @@ impl PartialEq for FruValue {
             (FruValue::Nah, FruValue::Nah) => true,
             (FruValue::Number(left), FruValue::Number(right)) => left == right,
             (FruValue::Bool(left), FruValue::Bool(right)) => left == right,
-            (FruValue::Type(left), FruValue::Type(right)) => left == right,
-            (FruValue::Object(left), FruValue::Object(right)) => left == right,
+            (FruValue::Thing(left), FruValue::Thing(right)) => left == right,
             (FruValue::Native(left), FruValue::Native(right)) => {
                 let op = left.get_type().get_operator(OperatorIdentifier::new(
                     static_ident!("=="),
@@ -166,14 +131,14 @@ impl Debug for FruValue {
             FruValue::Bool(x) => Debug::fmt(x, f),
             FruValue::Function(x) => Debug::fmt(x, f),
             FruValue::BuiltinFunction(x) => Debug::fmt(x, f),
-            FruValue::Type(x) => Debug::fmt(x, f),
-            FruValue::Object(x) => Debug::fmt(x, f),
+            FruValue::Thing(x) => Debug::fmt(x, f),
             FruValue::Native(x) => Debug::fmt(x, f),
         }
     }
 }
 
 // interpreter is single threaded, so should be okay
-unsafe impl Sync for FruValue {}
-
-unsafe impl Send for FruValue {}
+// unsafe impl Sync for FruValue {}
+//
+// unsafe impl Send for FruValue {}
+//

@@ -1,6 +1,8 @@
 use crate::common::*;
 use crate::identifier::id;
 use crate::stdlib::common::*;
+use crate::value::fru_value::type_id;
+use std::collections::HashMap;
 
 macro_rules! builtin_operator {
     ($Name:ident, $L:ident, $R:ident, $Res:ident, $OP:tt) => {
@@ -17,29 +19,26 @@ macro_rules! builtin_operator {
 macro_rules! builtin_operator_string {
     ($Name:ident, $Res:expr, $OP:tt) => {
         fn $Name(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-            let l = &cast_object::<BuiltinStringInstance>(&left).unwrap().value;
-            let r = &cast_object::<BuiltinStringInstance>(&right).unwrap().value;
+            let l = &cast_object::<BuiltinString>(&left).unwrap().value;
+            let r = &cast_object::<BuiltinString>(&right).unwrap().value;
             Ok($Res(l $OP r))
         }
     };
 }
 
 macro_rules! operator_group {
-    ($left:expr, $right:expr, [$(($op:expr, $fn_name:ident),)*]) => {
+    ($map:expr,$left:expr, $right:expr, [$(($op:expr, $fn_name:ident),)*]) => {
         $(
-            $left.set_operator(
-                OperatorIdentifier::new($op, $right.get_uid()),
-                AnyOperator::BuiltinOperator($fn_name),
-            ).unwrap();
+            $map.insert(OperatorIdentifier::new($left, $right,$ op), Operator::Builtin($fn_name));
         )*
     };
 }
 
-#[ctor::ctor]
-fn ct() {
+pub fn builtin_operators(map: &mut HashMap<OperatorIdentifier, Operator>) {
     operator_group!(
-        BuiltinNumberType::get_singleton(),
-        BuiltinNumberType::get_singleton(),
+        map,
+        *type_id::NUMBER_TYPE_ID,
+        *type_id::NUMBER_TYPE_ID,
         [
             (id::LESS, num_less_num),
             (id::LESS_EQ, num_less_eq_num),
@@ -55,15 +54,18 @@ fn ct() {
             (id::POW, num_pow_num),
         ]
     );
+
     operator_group!(
-        BuiltinBoolType::get_singleton(),
-        BuiltinBoolType::get_singleton(),
-        [(id::AND, bool_and_bool), (id::OR, bool_or_bool),]
+        map,
+        *type_id::BOOL_TYPE_ID,
+        *type_id::BOOL_TYPE_ID,
+        [(id::OR, bool_or_bool), (id::AND, bool_and_bool),]
     );
 
     operator_group!(
-        BuiltinStringType::get_singleton(),
-        BuiltinStringType::get_singleton(),
+        map,
+        *type_id::STRING_TYPE_ID,
+        *type_id::STRING_TYPE_ID,
         [
             (id::LESS, string_less_string),
             (id::LESS_EQ, string_less_eq_string),
@@ -76,14 +78,16 @@ fn ct() {
     );
 
     operator_group!(
-        BuiltinNumberType::get_singleton(),
-        BuiltinStringType::get_singleton(),
+        map,
+        *type_id::NUMBER_TYPE_ID,
+        *type_id::STRING_TYPE_ID,
         [(id::MULTIPLY, num_mul_string),]
     );
 
     operator_group!(
-        BuiltinStringType::get_singleton(),
-        BuiltinNumberType::get_singleton(),
+        map,
+        *type_id::STRING_TYPE_ID,
+        *type_id::NUMBER_TYPE_ID,
         [(id::MULTIPLY, string_mul_num),]
     );
 }
@@ -144,9 +148,9 @@ builtin_operator_string!(string_not_eq_string, FruValue::Bool, !=);
 
 // string arithmetic
 fn string_concat(left: FruValue, right: FruValue) -> Result<FruValue, FruError> {
-    let l = &cast_object::<BuiltinStringInstance>(&left).unwrap().value;
-    let r = &cast_object::<BuiltinStringInstance>(&right).unwrap().value;
-    Ok(NativeObject::new_value(BuiltinStringInstance::new(
+    let l = &cast_object::<BuiltinString>(&left).unwrap().value;
+    let r = &cast_object::<BuiltinString>(&right).unwrap().value;
+    Ok(NativeObject::new_value(BuiltinString::new(
         l.to_owned() + r,
     )))
 }
@@ -157,12 +161,10 @@ fn string_mul_num(left: FruValue, right: FruValue) -> Result<FruValue, FruError>
             return FruError::new_res("String * number must be a positive integer");
         }
 
-        let l = &cast_object::<BuiltinStringInstance>(&left).unwrap().value;
+        let l = &cast_object::<BuiltinString>(&left).unwrap().value;
         let r = r as usize;
 
-        return Ok(NativeObject::new_value(BuiltinStringInstance::new(
-            l.repeat(r),
-        )));
+        return Ok(NativeObject::new_value(BuiltinString::new(l.repeat(r))));
     }
 
     unreachable!();

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, rc::Rc};
+use std::collections::HashSet;
 
 use crate::common::*;
 
@@ -33,11 +33,7 @@ pub struct EvaluatedArgumentList {
 
 impl FormalParameters {
     // scope is the scope of function being called
-    pub fn apply(
-        &self,
-        evaluated: EvaluatedArgumentList,
-        scope: Rc<Scope>,
-    ) -> Result<(), FruError> {
+    pub fn apply(&self, evaluated: EvaluatedArgumentList, scope: Thing) -> Result<(), FruError> {
         let mut next_positional = 0;
 
         let acceptable: HashSet<_> = self.args.iter().map(|(x, _)| *x).collect();
@@ -61,19 +57,19 @@ impl FormalParameters {
             };
 
             scope
-                .let_variable(ident, value)
+                .let_prop(ident, value)
                 .map_err(|_| ArgumentError::SameSetTwice { ident })?;
         }
 
         for (ident, value) in self.args.iter().skip(next_positional) {
-            if scope.has_variable(*ident) {
+            if scope.has_prop(*ident) {
                 continue;
             }
 
             if let Some(default) = value {
                 let default = returned(default.evaluate(scope.clone()))?;
 
-                scope.let_variable(*ident, default)?;
+                scope.let_prop(*ident, default)?;
             } else {
                 return Err(ArgumentError::NotSetPositional { ident: *ident }.into());
             }

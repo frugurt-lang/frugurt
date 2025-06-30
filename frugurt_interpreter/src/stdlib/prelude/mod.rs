@@ -1,12 +1,4 @@
-pub mod builtin_bool_type;
-pub mod builtin_function_type;
-pub mod builtin_nah_type;
-pub mod builtin_number_type;
-pub mod builtin_scope_instance;
-pub mod builtin_scope_type;
-pub mod builtin_string_instance;
-pub mod builtin_string_type;
-pub mod builtin_type_type;
+pub mod builtin_string;
 pub mod functions;
 pub mod operators;
 pub mod variables;
